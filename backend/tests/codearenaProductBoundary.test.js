@@ -57,7 +57,6 @@ describe('CodeArena open edition boundary', () => {
       for (const file of walk(path.join(root, dir))) {
         if (!/\.(js|json|md|sql|yml|yaml)$/.test(file)) continue;
         if (/\/(tests|__tests__)\//.test(file)) continue;
-        if (file.endsWith('migrations.lock.json')) continue; // append-only ledger of historical names
         const text = fs.readFileSync(file, 'utf8');
         const match = text.match(markers);
         if (match) offenders.push(`${path.relative(root, file)}: ${match[0]}`);

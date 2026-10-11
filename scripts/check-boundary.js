@@ -44,8 +44,7 @@ const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 // Files that legitimately contain the forbidden words (they are the guards).
 const TEXT_ALLOWLIST = new Set([
   'scripts/check-boundary.js',
-  'backend/tests/codearenaProductBoundary.test.js',
-  'backend/migrations.lock.json'
+  'backend/tests/codearenaProductBoundary.test.js'
 ]);
 
 const TEXT_EXT = /\.(js|jsx|ts|tsx|mjs|cjs|json|md|txt|yml|yaml|css|html|sql|sh|toml|conf|example)$/;
