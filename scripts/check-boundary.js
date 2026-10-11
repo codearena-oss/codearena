@@ -24,6 +24,7 @@ const FORBIDDEN_PATHS = [
 // are allowed because the consumer product uses them in ordinary sentences.
 const FORBIDDEN_TEXT = [
   /deveval/i, /recruiter/i, /take-?home assessment/i, /codepair/i, /hiring manager/i,
+  /\bb2b\b/i, /hiring workflow/i,
   /assessment_sessions?/i, /ats_connections?/i, /aiCritiqueTemplates/, /findingsJudge/, /systemDesignJudge/,
   /discernment engine/i
 ];
