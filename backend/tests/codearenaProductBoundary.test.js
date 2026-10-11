@@ -44,14 +44,15 @@ describe('CodeArena open edition boundary', () => {
       'backend/calibration', 'backend/data/problems', 'backend/data/editorials.json', 'backend/data/botSolutions.js',
       'backend/data/assessmentPacks.js', 'backend/data/assessmentTemplates.json', 'backend/data/companyPrep.js',
       'backend/data/lessons', 'backend/problems-extended.js', 'backend/weeklyProblems.js',
-      'backend/scripts/generatedSolutions', 'backend/scripts/reports', 'backend/config/b2bThresholds.js',
+      'backend/scripts/generatedSolutions', 'backend/scripts/reports', 'backend/scripts/sendCuratedChangelog.js',
+      'backend/services/emailValidation.js', 'backend/config/b2bThresholds.js',
       'backend/config/dataRetention.js', 'backend/utils/validateAssessmentSettings.js'
     ];
     for (const file of forbiddenFiles) expect(exists(file)).toBe(false);
   });
 
   test('no source file outside tests mentions the hiring product', () => {
-    const markers = /deveval|recruiter|take-home|takehome|codepair|hiring manager|candidate_|assessment_session|ats_connection/i;
+    const markers = /deveval|recruiter|take-home|takehome|codepair|hiring manager|hiring workflow|\bb2b\b|candidate_|assessment_session|ats_connection/i;
     const offenders = [];
     for (const dir of ['backend', 'shared']) {
       for (const file of walk(path.join(root, dir))) {
