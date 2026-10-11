@@ -76,7 +76,7 @@ Act on reports promptly. Remove content that breaks the [Terms](https://codearen
 
 ## Good next things
 
-- Languages: [Java #1](https://github.com/sennaicodes/codearena/issues/1), [C++ #2](https://github.com/sennaicodes/codearena/issues/2), [Go #3](https://github.com/sennaicodes/codearena/issues/3).
+- Languages: [Java #1](https://github.com/codearena-oss/codearena/issues/1), [C++ #2](https://github.com/codearena-oss/codearena/issues/2), [Go #3](https://github.com/codearena-oss/codearena/issues/3).
 - More problems (the best first contribution for newcomers).
 - The win/loss backfill above.
 - A private problem set for ranked play.

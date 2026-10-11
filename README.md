@@ -2,7 +2,7 @@
 
 Practice coding and prompting with friends, battle other developers live, climb the rankings and build community games.
 
-CodeArena is an open-source project (AGPL-3.0). It runs the public site at [codearena.co](https://codearena.co) and you can host your own copy. Source: [github.com/sennaicodes/codearena](https://github.com/sennaicodes/codearena).
+CodeArena is an open-source project (AGPL-3.0). It runs the public site at [codearena.co](https://codearena.co) and you can host your own copy. Source: [github.com/codearena-oss/codearena](https://github.com/codearena-oss/codearena).
 
 ## What is in the box
 
@@ -76,7 +76,7 @@ Adding a problem is the best first contribution. [backend/arena/docs/problems.md
 
 Everything in this repository is public, including tests, so a determined player could hard-code answers. If you run ranked battles, keep an extra private set in a directory laid out like `backend/arena/` and set `CODEARENA_PRIVATE_PROBLEMS_DIR` to it. The bots will find solutions there too.
 
-Supported languages: JavaScript, Python and TypeScript. Adding a language means adding a driver in `backend/arena/runner/harness.js`; Java, C++ and Go are open for contributors ([#1](https://github.com/sennaicodes/codearena/issues/1), [#2](https://github.com/sennaicodes/codearena/issues/2), [#3](https://github.com/sennaicodes/codearena/issues/3)).
+Supported languages: JavaScript, Python and TypeScript. Adding a language means adding a driver in `backend/arena/runner/harness.js`; Java, C++ and Go are open for contributors ([#1](https://github.com/codearena-oss/codearena/issues/1), [#2](https://github.com/codearena-oss/codearena/issues/2), [#3](https://github.com/codearena-oss/codearena/issues/3)).
 
 ## How it is built
 
