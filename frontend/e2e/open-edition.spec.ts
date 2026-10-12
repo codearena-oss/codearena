@@ -392,7 +392,7 @@ test('7. every page renders without console or page errors while signed in', asy
     await page.waitForTimeout(1500)
     const status = response ? response.status() : 0
     const body = await page.locator('body').innerText().catch(() => '')
-    const serverError = /Application error|Internal Server Error|Unhandled Runtime Error/i.test(body)
+    const serverError = !response || !body.trim() || /Application error|Internal Server Error|Unhandled Runtime Error/i.test(body)
     statuses.push(`${route} -> ${status}${serverError ? ' SERVER-ERROR' : ''}${errors.length > before ? ` (${errors.length - before} console errors)` : ''}`)
     if (serverError || status >= 500) await shot(page, `27-smoke${route.replace(/[^a-z0-9]+/gi, '-')}`)
   }
