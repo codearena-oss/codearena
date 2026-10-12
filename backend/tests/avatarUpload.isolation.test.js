@@ -31,6 +31,7 @@ function response() {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  delete process.env.CODEARENA_AVATARS_DISABLED
   db.getUserById.mockResolvedValue({ id: 42, avatar_url: ownedUrl })
   db.run.mockResolvedValue({ changes: 1 })
   cloudinary.uploader.upload_stream.mockImplementation((options, callback) => ({
@@ -41,6 +42,21 @@ beforeEach(() => {
 afterAll(() => { process.env = originalEnv })
 
 describe('avatar routes protect shared Cloudinary assets', () => {
+  test.each(['post', 'delete'])('maintenance blocks %s before storage or database changes', async method => {
+    process.env.CODEARENA_AVATARS_DISABLED = '1'
+    const express = require('express')
+    const request = require('supertest')
+    const app = express()
+    app.use((req, res, next) => { req.user = { sub: 42 }; next() })
+    app.use('/avatar', router)
+    const result = await request(app)[method]('/avatar')
+    expect(result.status).toBe(503)
+    expect(result.body.code).toBe('avatars_unavailable')
+    expect(db.getUserById).not.toHaveBeenCalled()
+    expect(db.run).not.toHaveBeenCalled()
+    expect(cloudinary.uploader.upload_stream).not.toHaveBeenCalled()
+    expect(cloudinary.uploader.destroy).not.toHaveBeenCalled()
+  })
   test('deletes only the authenticated user’s CodeArena asset', async () => {
     const res = response()
     await remove({ user: { sub: 42 } }, res)

@@ -12,13 +12,23 @@ const { moderateImage } = require('../services/imageModeration');
 const { BACKEND_URL } = require('../config/appUrls');
 const { cloudinaryAvatarUploadOptions, ownedCloudinaryAvatarId } = require('../utils/avatarStorage');
 
+// Stop mutations before parsing an upload or contacting a storage provider.
+router.use((req, res, next) => {
+  if (process.env.CODEARENA_AVATARS_DISABLED === '1') {
+    return res.status(503).json({ error: 'Profile photo changes are temporarily unavailable.', code: 'avatars_unavailable' });
+  }
+  next();
+});
+
 // Cloudinary setup (optional - falls back to local storage if not configured)
 let cloudinary = null;
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
-if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
+if (process.env.CODEARENA_AVATARS_DISABLED === '1') {
+  logger.warn('[AVATAR] Profile photo changes disabled for maintenance');
+} else if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
   cloudinary = require('cloudinary').v2;
   cloudinary.config({
     cloud_name: CLOUDINARY_CLOUD_NAME,

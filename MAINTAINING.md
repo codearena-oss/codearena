@@ -60,6 +60,17 @@ Pricier models count more against the daily prompt budget (Opus 5, Sonnet 3, the
 
 The local browser suite does not verify production email delivery, provider credentials or hosting access. Before announcing a release, separately verify a new account's registration, email verification, login and code execution on the deployed site.
 
+### Provider maintenance
+
+Deploy support for these controls before enabling them:
+
+- `CODEARENA_RUNNER=disabled` keeps the API running but returns execution unavailable for code submissions and custom inputs. It overrides configured Judge0 credentials and never falls back to local execution. Practice and coding battles cannot complete normally while it is enabled.
+- `CODEARENA_AVATARS_DISABLED=1` rejects avatar uploads and deletions with HTTP 503 before processing images or contacting storage. Existing avatar URLs remain readable.
+
+These switches stop normal application calls; they do not protect credentials still present in the process from a server compromise. Remove affected provider secrets from the deployment and restart it to remove runtime access. Revoke old keys at the provider after all legitimate consumers have migrated. Old deployments may retain configuration, so do not roll back to a deployment containing retired credentials.
+
+To restore service, configure dedicated provider credentials, remove the maintenance switches, redeploy, and verify a code submission and an avatar change.
+
 ## When something breaks
 
 - **Site down or acting strangely:** check `https://api.codearena.co/health`. It reports the running version (commit) and whether the database and websockets are up.

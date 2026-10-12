@@ -63,6 +63,21 @@ describe('validateSolution adapter over the arena runner', () => {
 });
 
 describe('runner selection from the environment', () => {
+  test('maintenance mode overrides provider settings without executing or grading code', async () => {
+    const env = { NODE_ENV: 'production', CODEARENA_RUNNER: 'disabled', JUDGE0_URL: 'https://must-not-be-called.invalid', RAPIDAPI_KEY: 'test-only' };
+    const execute = executorFromEnv(env);
+    expect(describeRunner(env)).toMatch(/disabled for maintenance/);
+    expect(await execute({})).toMatchObject({ status: 'unavailable', stdout: '', timeMs: 0 });
+    validate.setExecutor(execute);
+    try {
+      const rows = await validate.validateSolution(PY_OK, [], 'python', 'win-streak');
+      expect(validate.executionWasUnavailable(rows)).toBe(true);
+      expect(validate.allTestsPassed(rows)).toBe(false);
+      expect(await validate.runSingleTest(PY_OK, 'python', 'win-streak', '"WWLW"')).toMatchObject({ success: false, executionUnavailable: true });
+    } finally {
+      validate.setExecutor(localExecutor());
+    }
+  });
   test('development falls back to the local runner and says so loudly', () => {
     expect(typeof executorFromEnv({ NODE_ENV: 'development' })).toBe('function');
     expect(describeRunner({ NODE_ENV: 'development' })).toMatch(/LOCAL fallback/);
