@@ -25,7 +25,7 @@ const sections = [
   { id: 'notifications', label: 'Notifications', icon: Bell, color: 'text-secondary-400', keywords: ['alerts', 'push', 'weekly', 'tournament', 'digest'] },
   { id: 'privacy', label: 'Privacy', icon: Shield, color: 'text-primary-400', keywords: ['read receipts', 'visibility', 'data'] },
   { id: 'editor', label: 'Editor', icon: Code2, color: 'text-secondary-400', keywords: ['vim', 'keybindings', 'code', 'theme'] },
-  { id: 'subscription', label: 'Subscription', icon: Crown, color: 'text-warning', keywords: ['pro', 'plan', 'upgrade', 'billing', 'payment'] },
+  { id: 'subscription', label: 'Access', icon: Crown, color: 'text-warning', keywords: ['free', 'access', 'fair use'] },
   { id: 'data', label: 'Data Export', icon: Download, color: 'text-surface-400', keywords: ['export', 'download', 'gdpr', 'backup'] },
   { id: 'help', label: 'Help', icon: HelpCircle, color: 'text-primary-400', keywords: ['support', 'tour', 'tutorial', 'guide'] },
   { id: 'danger', label: 'Delete Account', icon: Trash2, color: 'text-danger', keywords: ['delete', 'remove', 'close account'] }

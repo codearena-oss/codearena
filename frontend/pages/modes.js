@@ -15,7 +15,7 @@ const presentation = {
   matchmaking: { category: 'Multiplayer', description: 'Join the queue for a coding or prompt battle with another developer.', tags: ['Public matchmaking', 'Head-to-head'], action: 'Find a match', accent: 'text-cyan-400' },
   private: { category: 'Multiplayer', description: 'Set up a battle and invite a friend. Pick a problem and see how your solutions compare.', tags: ['Invite a friend', 'Custom setup'], action: 'Challenge a friend', accent: 'text-rose-400' },
   tournaments: { category: 'Multiplayer', description: 'Join a scheduled competition or organize one. Play through the bracket, one match at a time.', tags: ['Live brackets', 'Community events'], action: 'View tournaments', accent: 'text-yellow-400' },
-  create: { category: 'Create', title: 'CreatorArena', description: 'Make a playable game, try it out, and share it with the community.', tags: ['Build & share', 'Generation uses credits'], action: 'Open CreatorArena', accent: 'text-primary-400' },
+  create: { category: 'Create', title: 'CreatorArena', description: 'Make a playable game, try it out, and share it with the community.', tags: ['Build & share', 'Free daily AI use'], action: 'Open CreatorArena', accent: 'text-primary-400' },
 }
 const modeOrder = ['practice', 'bot-battle', 'matchmaking', 'private', 'tournaments', 'create']
 

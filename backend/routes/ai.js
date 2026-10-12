@@ -3,6 +3,7 @@ const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 const { containsProfanityForGames } = require('../utils/contentFilter');
 const db = require('../db');
+const { getConsumerFairUseLimit } = require('../../shared/codearenaProductMode');
 const { sendReferralCompletedEmail } = require('../services/email');
 const {
   MINIMAL_CANVAS_TEMPLATE,
@@ -415,19 +416,20 @@ function validateGeneratedGame(html, isTextGame) {
   return issues;
 }
 
-/** GET /api/ai/credits: Get user's credit balance */
+/** Legacy path retained for older clients; CreatorArena now uses a free daily allowance. */
 router.get('/credits', gameAuthMiddleware, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const credits = await db.getUserCredits(userId);
-    const canGenerate = await db.canUserGenerate(userId, false);
+    const limit = getConsumerFairUseLimit('creatorGenerationsPerDay');
+    const used = await db.getConsumerDailyUsage('creator_generation', `user:${userId}`);
+    const remaining = Math.max(0, limit - used);
 
     res.json({
       success: true,
-      credits: credits.balance,
+      remaining,
+      limit,
       isPro: false,
-      canGenerate: canGenerate.allowed,
-      cost: db.CREDITS_PER_GENERATION
+      canGenerate: remaining > 0
     });
   } catch (error) {
     console.error('Get credits error:', error);
@@ -449,9 +451,6 @@ router.post('/generate-game', gameAuthMiddleware, gameGenLimiter, async (req, re
   }
 
   const isRevision = mode === 'revise' || mode === 'fix';
-  const cost = isRevision
-    ? (requestGameId ? await db.getRevisionCost(requestGameId) : db.CREDITS_PER_REVISION)
-    : db.CREDITS_PER_GENERATION;
 
   if (!prompt && !sections) {
     return res.status(400).json({ error: 'A prompt or sections are required' });
@@ -532,30 +531,22 @@ router.post('/generate-game', gameAuthMiddleware, gameGenLimiter, async (req, re
     });
   }
 
-  const description = isRevision
-    ? `Revision: ${(prompt || 'Game').slice(0, 50)}`
-    : `Generated: ${(prompt || 'Game').slice(0, 50)}`;
-  const reservation = await db.deductCredits(userId, cost, description, requestGameId || null);
-  if (!reservation.success) {
-    return res.status(402).json({
-      error: 'Purchase CreatorArena credits to create games',
-      code: 'INSUFFICIENT_CREDITS',
-      credits: reservation.balance,
-      cost,
-      isPro: false
+  const userLimit = getConsumerFairUseLimit('creatorGenerationsPerDay');
+  const globalLimit = getConsumerFairUseLimit('globalCreatorGenerationsPerDay');
+  const quota = await db.tryConsumeConsumerDailyUsage([
+    { metric: 'creator_generation', subjectId: `user:${userId}`, limit: userLimit },
+    { metric: 'creator_generation', subjectId: 'global', limit: globalLimit }
+  ]);
+  if (!quota.allowed) {
+    return res.status(429).json({
+      error: quota.reason === 'global_limit'
+        ? 'CreatorArena has reached its daily AI allowance. Try again tomorrow.'
+        : 'You have used your free CreatorArena generation for today. Try again tomorrow.',
+      code: 'CREATOR_DAILY_LIMIT',
+      remaining: Math.max(0, userLimit - (await db.getConsumerDailyUsage('creator_generation', `user:${userId}`)))
     });
   }
-
-  let reservationActive = true;
-  const refundReservation = async (reason) => {
-    if (!reservationActive) return;
-    reservationActive = false;
-    try {
-      await db.refundCredits(userId, cost, `CreatorArena generation refund: ${reason}`, requestGameId || null);
-    } catch (refundError) {
-      console.error('[GAME-GEN] Failed to refund reserved credits:', refundError.message);
-    }
-  };
+  const remaining = Math.max(0, userLimit - (await db.getConsumerDailyUsage('creator_generation', `user:${userId}`)));
 
   // Layer 2: AI-powered content moderation, catches thematic/contextual offensiveness
   if (!(isRevisionMode && CREATORARENA_SKIP_MODERATION_FOR_REVISIONS)) {
@@ -586,7 +577,6 @@ Respond with ONLY one word: "SAFE" or "UNSAFE". Nothing else.`,
       });
       const verdict = (moderationRes.content[0]?.text || '').trim().toUpperCase();
       if (verdict === 'UNSAFE') {
-        await refundReservation('content rejected');
         return res.status(400).json({ error: 'Your prompt contains themes or content that violate our community guidelines. Please revise and try again.' });
       }
     } catch (modErr) {
@@ -700,7 +690,6 @@ Fix these issues and output ONLY the corrected HTML. No explanation, no markdown
     // Final validation
     if (!/<html/i.test(html) && !/<!DOCTYPE/i.test(html) && !/<head/i.test(html) && !/<body/i.test(html)) {
       console.log('[GAME-GEN] No valid HTML in response. First 300 chars:', html.substring(0, 300));
-      await refundReservation('invalid model output');
       return res.status(400).json({ error: 'Unable to generate this game. Your prompt may contain inappropriate content or be too vague. Please revise and try again.' });
     }
 
@@ -716,9 +705,6 @@ Fix these issues and output ONLY the corrected HTML. No explanation, no markdown
     // explicit unsaved draft until the creator presses Save. Persisting only a
     // game_versions row here allowed verification/publish to approve that row
     // while Gallery still served the older games.html_content value.
-
-    reservationActive = false;
-    const creditsRemaining = reservation.balance;
 
     // Complete referral (grants credits to referrer on first game creation)
     try {
@@ -753,22 +739,9 @@ Fix these issues and output ONLY the corrected HTML. No explanation, no markdown
     }
 
     console.log('[GAME-GEN] Success. HTML size:', html.length, 'bytes');
-    // Calculate next revision cost for the frontend
-    let nextRevisionCost = 0;
-    let freeRevisionsLeft = db.FREE_REVISIONS_PER_GAME;
-    if (requestGameId) {
-      const gameAfter = await db.getGameById(requestGameId);
-      if (gameAfter) {
-        const revCount = gameAfter.revision_count || 0;
-        freeRevisionsLeft = Math.max(0, db.FREE_REVISIONS_PER_GAME - revCount);
-        nextRevisionCost = freeRevisionsLeft > 0 ? 0 : db.CREDITS_PER_REVISION;
-      }
-    }
-
-    res.json({ success: true, html, credits: creditsRemaining, isPro: false, revisionCost: nextRevisionCost, freeRevisionsLeft });
+    res.json({ success: true, html, remaining, limit: userLimit, isPro: false });
   } catch (error) {
     console.error('Game generation error:', error?.message || error);
-    await refundReservation(error?.message || 'generation failed');
     if (error?.status === 429) {
       return res.status(429).json({ error: 'AI rate limit reached. Please wait a moment and try again.' });
     }

@@ -23,12 +23,6 @@ function generateSiteMap(problems, profiles) {
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>${SITE_URL}/pricing</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>${SITE_URL}/problems</loc>
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>

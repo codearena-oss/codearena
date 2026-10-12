@@ -485,19 +485,16 @@ router.post('/create-checkout', paymentLimiter, authMiddleware, rejectRetiredCon
 // ============================================
 
 router.get('/credit-packs', (req, res) => {
-  res.json({
-    success: true,
-    packs: Object.entries(CREDIT_PACKS).map(([id, pack]) => ({
-      id,
-      credits: pack.credits,
-      price: pack.priceInCents / 100,
-      priceFormatted: `$${(pack.priceInCents / 100).toFixed(2)}`,
-      name: pack.name
-    }))
-  });
+  res.json({ success: true, packs: [] });
 });
 
-router.post('/purchase-credits', authMiddleware, paymentLimiter, async (req, res) => {
+router.post('/purchase-credits', authMiddleware, paymentLimiter, (req, res) => {
+  return res.status(410).json({
+    error: 'CreatorArena is free. Credit purchases are no longer offered.',
+    success: false,
+    code: 'creator_purchases_retired'
+  });
+}, async (req, res) => {
   if (!stripe) {
     return res.status(503).json({
       error: 'Payment system not configured',

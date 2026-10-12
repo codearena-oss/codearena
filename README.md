@@ -57,7 +57,7 @@ Everything is read from environment variables; `backend/.env.example` and `front
 | `CODEARENA_AGENT_BATTLES=1` | Turns agent battles on (also needs `ANTHROPIC_API_KEY`). |
 | `RESEND_API_KEY` | Email: verification, password reset, notifications. |
 | `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID`/`_SECRET` | Social sign-in. |
-| `STRIPE_*` | CreatorArena credit packs. Leave unset to disable purchases. |
+| `STRIPE_*` | Legacy billing records only. New CodeArena purchases are retired; leave unset for new deployments. |
 | `CODEARENA_PRIVATE_PROBLEMS_DIR` | Extra problems a hosted instance keeps out of git (see below). |
 | `CODEARENA_DAILY_*`, `CODEARENA_GLOBAL_DAILY_*` | Fair-use limits per user and per server, in UTC days. |
 

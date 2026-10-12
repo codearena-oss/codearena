@@ -128,11 +128,15 @@ describe('CodeArena open edition boundary', () => {
     expect(exists('frontend/utils/companySignup.js')).toBe(false);
   });
 
-  test('CreatorArena and feedback keep their cost controls, no recurring Pro upsell', () => {
+  test('CreatorArena and feedback keep free-use cost controls without paid upsells', () => {
     expect(aiSource).not.toContain("router.post('/prompt'");
     expect(aiSource).not.toContain('db.isUserPro(userId)');
-    expect(aiSource).toContain('await db.deductCredits(userId, cost');
-    expect(aiSource).toContain('await db.refundCredits(userId, cost');
+    expect(aiSource).toContain("getConsumerFairUseLimit('creatorGenerationsPerDay')");
+    expect(aiSource).toContain("getConsumerFairUseLimit('globalCreatorGenerationsPerDay')");
+    expect(aiSource).toContain('await db.tryConsumeConsumerDailyUsage([');
+    expect(aiSource).not.toContain('await db.deductCredits(userId, cost');
+    expect(paymentSource).toContain("code: 'creator_purchases_retired'");
+    expect(read('frontend/pages/create.js')).not.toContain('/api/payment/purchase-credits');
     expect(paymentSource).not.toContain('updateCompanyBilling');
     expect(paymentSource).toContain('rejectRetiredConsumerSubscription');
     expect(read('frontend/components/Header.js')).not.toContain('Upgrade to Pro');

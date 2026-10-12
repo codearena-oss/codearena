@@ -143,15 +143,13 @@ export default function Terms() {
               </section>
 
               <section className="bg-surface-800/50 border border-surface-700 rounded-lg p-6">
-                <h2 className="text-2xl font-bold mb-4">Payments and Creator Credits</h2>
+                <h2 className="text-2xl font-bold mb-4">Free Access and Fair Use</h2>
                 <p className="text-surface-300 mb-3">
-                  CodeArena's core practice, battle, and social features are free. Some compute-intensive CreatorArena actions use credits, which may be available through one-time credit packs.
+                  CodeArena is free, including CreatorArena AI generation within a daily fair-use allowance.
                 </p>
                 <ul className="text-surface-300 space-y-2 list-disc list-inside">
-                  <li><strong>Billing:</strong> Payments are processed securely by Stripe</li>
-                  <li><strong>Refunds:</strong> Except when required by law, used credit packs are non-refundable</li>
-                  <li><strong>Price Changes:</strong> We may change credit-pack prices with notice before purchase</li>
-                  <li><strong>Service Changes:</strong> Credit costs and CreatorArena features may change as the service evolves</li>
+                  <li><strong>Fair Use:</strong> AI generations and code execution have daily limits to keep the service available to everyone</li>
+                  <li><strong>Service Changes:</strong> Fair-use limits and CreatorArena features may change as the service evolves</li>
                 </ul>
               </section>
 

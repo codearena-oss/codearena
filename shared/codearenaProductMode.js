@@ -23,9 +23,11 @@ const CODEARENA_PRODUCT_MODE = Object.freeze({
       promptBattleModelCallsPerDay: 10,
       complexityAnalysesPerDay: 5,
       creatorVerificationsPerDay: 5,
+      creatorGenerationsPerDay: 1,
       globalCodeExecutionsPerDay: 5000,
       globalPromptEvaluationsPerDay: 500,
-      globalCreatorVerificationsPerDay: 100
+      globalCreatorVerificationsPerDay: 100,
+      globalCreatorGenerationsPerDay: 25
     })
   })
 })
@@ -39,9 +41,11 @@ const FAIR_USE_ENV_VARS = Object.freeze({
   promptBattleModelCallsPerDay: 'CODEARENA_DAILY_PROMPT_BATTLE_MODEL_LIMIT',
   complexityAnalysesPerDay: 'CODEARENA_DAILY_COMPLEXITY_ANALYSIS_LIMIT',
   creatorVerificationsPerDay: 'CODEARENA_DAILY_CREATOR_VERIFICATION_LIMIT',
+  creatorGenerationsPerDay: 'CODEARENA_DAILY_CREATOR_GENERATION_LIMIT',
   globalCodeExecutionsPerDay: 'CODEARENA_GLOBAL_DAILY_CODE_EXECUTION_LIMIT',
   globalPromptEvaluationsPerDay: 'CODEARENA_GLOBAL_DAILY_PROMPT_EVALUATION_LIMIT',
-  globalCreatorVerificationsPerDay: 'CODEARENA_GLOBAL_DAILY_CREATOR_VERIFICATION_LIMIT'
+  globalCreatorVerificationsPerDay: 'CODEARENA_GLOBAL_DAILY_CREATOR_VERIFICATION_LIMIT',
+  globalCreatorGenerationsPerDay: 'CODEARENA_GLOBAL_DAILY_CREATOR_GENERATION_LIMIT'
 })
 
 function getConsumerFairUseLimit(quotaName, environment) {

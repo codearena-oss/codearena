@@ -1079,17 +1079,17 @@ function ProfileSettings() {
                 </AnimatePresence>
               </div>
 
-              {/* Billing Section */}
+              {/* Free access section */}
               <div ref={subscriptionRef}>
-                <MobileSectionHeader id="subscription" icon={User} title="Billing" iconColor="text-warning" expandedSections={expandedSections} activeSection={activeSection} onToggle={toggleSection} />
+                <MobileSectionHeader id="subscription" icon={User} title="Access" iconColor="text-warning" expandedSections={expandedSections} activeSection={activeSection} onToggle={toggleSection} />
                 <AnimatePresence>
                   {(expandedSections.includes('subscription') || typeof window !== 'undefined' && window.innerWidth >= 1024) && (
                     <SettingsSection
                       id="subscription-section"
                       icon={User}
                       iconColor="text-warning"
-                      title="Billing"
-                      description="Core CodeArena access is free"
+                      title="Access"
+                      description="CodeArena is free"
                     >
                       <div className={`p-4 rounded-xl border ${user?.is_pro ? 'bg-surface-800 border-primary-500/20' : 'bg-surface-800/50 border-surface-700'}`}>
                         <div className="flex items-center justify-between">
@@ -1102,14 +1102,14 @@ function ProfileSettings() {
                                 Free CodeArena
                               </h3>
                               <p className="text-sm text-surface-400">
-                                Battles, Practice, rankings, and social features included
+                                Battles, Practice, CreatorArena, rankings, and social features included
                               </p>
                             </div>
                           </div>
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => router.push('/pricing')}
+                            onClick={() => router.push('/about')}
                           >
                             Learn more
                           </Button>

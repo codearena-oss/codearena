@@ -79,26 +79,18 @@ beforeEach(() => {
   mockStripe.charges.retrieve.mockResolvedValue(charge())
 })
 
-test('new purchases use metadata that legacy checkout handlers cannot claim', async () => {
+test('credit purchases are retired without touching the shared Stripe account', async () => {
   const res = await route('/purchase-credits', { packId: 'small' })
-  expect(res.statusCode).toBe(200)
-  const checkout = mockStripe.checkout.sessions.create.mock.calls[0][0]
-  for (const value of [checkout.metadata, checkout.payment_intent_data.metadata]) {
-    expect(value).toMatchObject(metadata())
-    expect(value).not.toHaveProperty('userId')
-    expect(value).not.toHaveProperty('companyId')
-    expect(value.type).not.toBe('credit_purchase')
-  }
+  expect(res.statusCode).toBe(410)
+  expect(res.body.code).toBe('creator_purchases_retired')
+  expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled()
+  expect(mockStripe.customers.create).not.toHaveBeenCalled()
 })
 
-test('a foreign customer pointer is replaced locally without modifying its Stripe customer', async () => {
-  mockStripe.customers.retrieve.mockResolvedValue({ id: 'cus_other_product', metadata: { userId: '7' } })
-  await route('/purchase-credits', { packId: 'small' })
-  expect(mockStripe.customers.create).toHaveBeenCalledWith({
-    email: 'fixture@example.test', metadata: { product: 'codearena', codearenaUserId: '7' }
-  }, { idempotencyKey: 'codearena:customer:v1:7' })
-  expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ customer: 'cus_fresh_codearena' }))
-  expect(db.run).toHaveBeenCalledWith(expect.any(String), ['cus_fresh_codearena', 7])
+test('credit packs are no longer advertised', async () => {
+  const res = await route('/credit-packs', {}, 'get')
+  expect(res.statusCode).toBe(200)
+  expect(res.body.packs).toEqual([])
 })
 
 test.each([
