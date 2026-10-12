@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -18,20 +18,26 @@ export default function VerifyEmail() {
   const [status, setStatus] = useState('loading'); // loading, success, error
   const [error, setError] = useState('');
   const [verificationType, setVerificationType] = useState('account'); // account or email-change
+  const attemptedVerification = useRef(null);
+  const isEmailChange = router.pathname === '/verify-email-change' || type === 'email-change';
 
   useEffect(() => {
     if (!router.isReady) return;
 
-    if (!token) {
+    if (typeof token !== 'string' || !token) {
       setStatus('error');
       setError('No verification token provided');
       return;
     }
 
+    const attemptKey = `${isEmailChange ? 'change' : 'account'}:${token}`;
+    if (attemptedVerification.current === attemptKey) return;
+    attemptedVerification.current = attemptKey;
+
     const verify = async () => {
       // Try new account verification first, then fall back to email change
       try {
-        if (type === 'email-change') {
+        if (isEmailChange) {
           // Explicit email change verification
           await verifyEmailChange(token);
           setVerificationType('email-change');
@@ -58,7 +64,7 @@ export default function VerifyEmail() {
     };
 
     verify();
-  }, [router.isReady, token, type, verifyEmailChange, verifyEmail, isAuthenticated, setEmailVerified]);
+  }, [router.isReady, token, isEmailChange, verifyEmailChange, verifyEmail, isAuthenticated, setEmailVerified]);
 
   // The success screen promises "Redirecting you to CodeArena..." for a verified
   // account while logged in: actually perform that redirect (a button remains as fallback).

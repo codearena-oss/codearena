@@ -385,7 +385,7 @@ test('7. every page renders without console or page errors while signed in', asy
     '/matchmaking', '/messages', `/messages/${userB.user.id}`, '/modes', '/players', '/practice', '/pricing', '/privacy',
     '/problems', '/problems/win-streak', `/profile/${userA.user.username}`, '/profile', '/prompt-battle', '/prompt-practice',
     '/register', '/reset-password', '/settings/profile', '/terms', '/tournaments', '/tournaments/join/not-a-code',
-    '/unsubscribe', '/verify-email', '/verify-required', '/does-not-exist'
+    '/unsubscribe', '/verify-email', '/verify-email-change', '/verify-required', '/does-not-exist'
   ]
   for (const route of pages) {
     const before = errors.length
