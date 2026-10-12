@@ -70,3 +70,59 @@ jobs:
       - run: npx next build
         env:
           NEXT_PUBLIC_BACKEND_URL: http://127.0.0.1:3001
+
+  browser:
+    name: Browser flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      JWT_SECRET: browser-ci-only-not-a-production-secret
+      DB_PATH: /tmp/codearena-browser.sqlite
+      CODEARENA_RUNNER: local
+      CODEARENA_DEV_AUTO_LOGIN: '1'
+      FRONTEND_URL: http://localhost:3200
+      CORS_ALLOWED_ORIGINS: http://localhost:3200
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:3201
+      NEXT_PUBLIC_FRONTEND_URL: http://localhost:3200
+      E2E_SHOTS: /tmp/codearena-browser-shots
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm --prefix backend ci
+      - run: npm --prefix frontend ci
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Start isolated test servers
+        run: |
+          (cd backend && PORT=3201 node server.js) > /tmp/browser-backend.log 2>&1 &
+          (cd frontend && npx next dev --port 3200) > /tmp/browser-frontend.log 2>&1 &
+          for i in $(seq 1 120); do
+            if curl -fsS http://localhost:3201/health > /dev/null && curl -fsS http://localhost:3200/login > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/browser-backend.log /tmp/browser-frontend.log
+          exit 1
+      - name: Practice, battles, matchmaking and page rendering
+        run: npx playwright test -c e2e/open-edition.config.ts
+        working-directory: frontend
+      - name: Preserve failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-evidence
+          retention-days: 7
+          path: |
+            frontend/test-results/open-edition
+            /tmp/codearena-browser-shots
+            /tmp/browser-backend.log
+            /tmp/browser-frontend.log

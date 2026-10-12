@@ -18,6 +18,7 @@ A guide for maintainers: how the project fits together, how changes reach codear
    - the publish boundary check;
    - backend: problem validation, a boot and health probe, and every test;
    - frontend: lint, tests and a production build.
+   - browser flows: practice, private and bot battles, matchmaking, and page rendering against an isolated local database without production credentials.
 2. Merging to `main` deploys automatically:
    - **backend** on Railway, using `railway.toml` at the repo root. Keep the service's Root Directory **empty**: the build and start commands already point into `backend/`.
    - **frontend** on Vercel, with Root Directory `frontend`.
@@ -37,7 +38,7 @@ A guide for maintainers: how the project fits together, how changes reach codear
 
 ## Costs and safety limits
 
-Every paid service has a cap, so a busy day cannot become a large bill.
+Application quotas limit normal use. Configure provider spending limits separately; application quotas do not protect against a stolen provider key.
 
 | Service | Used for | Cap |
 |---|---|---|
@@ -47,6 +48,17 @@ Every paid service has a cap, so a busy day cannot become a large bill.
 | Resend | Email | Key restricted to the codearena.co domain |
 
 Pricier models count more against the daily prompt budget (Opus 5, Sonnet 3, the rest 1), in `backend/services/promptBattleRunner.js`.
+
+## Hosted deployment isolation
+
+- Use dedicated provider credentials and resources for this deployment. A different repository or an avatar folder does not isolate a shared provider account.
+- Cloudinary: use a dedicated product environment with its own cloud name, API key and secret. Existing avatar URLs can remain readable; only assets owned by the configured environment are eligible for deletion.
+- RapidAPI: use a dedicated app/key for code execution and configure provider usage limits. A separate key alone does not guarantee separate billing or quota; verify the subscription settings.
+- Keep production secrets in the hosting provider, never in this repository, browser configuration, CI logs or test artifacts.
+- Give maintainers repository access and only the hosting projects they need. Require two-factor authentication for organization members after the owner has enrolled.
+- After replacing credentials, redeploy the backend from source, verify health and exercise an avatar upload and code run. Revoke superseded credentials only after confirming that no other deployment still needs them.
+
+The local browser suite does not verify production email delivery, provider credentials or hosting access. Before announcing a release, separately verify a new account's registration, email verification, login and code execution on the deployed site.
 
 ## When something breaks
 
