@@ -122,7 +122,7 @@ jobs:
           name: browser-failure-evidence
           retention-days: 7
           path: |
-            frontend/test-results/open-edition
+            frontend/e2e/test-results/open-edition
             /tmp/codearena-browser-shots
             /tmp/browser-backend.log
             /tmp/browser-frontend.log
