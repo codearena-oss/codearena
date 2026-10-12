@@ -28,6 +28,29 @@ const aiSource = read('backend/routes/ai.js');
 const paymentSource = read('backend/routes/payment.js');
 
 describe('CodeArena open edition boundary', () => {
+  test('private integrity modules and renamed implementations are rejected by the publish guard', () => {
+    const { FORBIDDEN_PATHS, FORBIDDEN_TEXT } = require('../../scripts/check-boundary');
+    const privatePaths = [
+      'backend/services/assessmentIntegrityEvents.js',
+      'backend/services/editTraceAnalysis.js',
+      'backend/services/cameraProctoring.js',
+      'backend/services/integrityRedaction.js',
+      'backend/services/authorshipFollowUp.js',
+      'backend/services/authorshipReplay.js',
+      'backend/tests/fixtures/assessmentIntegrityCalibrationCases.js',
+      'frontend/components/AntiCheatSuite.js',
+      'frontend/components/AttentionCheck.js',
+      'frontend/utils/integrityFingerprint.js'
+    ];
+    for (const file of privatePaths) {
+      expect(exists(file)).toBe(false);
+      expect(FORBIDDEN_PATHS.some(pattern => pattern.test(file))).toBe(true);
+    }
+    // Renaming a private module does not bypass its characteristic identifiers.
+    expect(FORBIDDEN_TEXT.some(pattern => pattern.test('function summarizeAssessmentIntegrity(flags) {}'))).toBe(true);
+    expect(FORBIDDEN_PATHS.some(pattern => pattern.test('backend/services/antiCheat.js'))).toBe(false);
+    expect(FORBIDDEN_TEXT.some(pattern => pattern.test(read('backend/services/antiCheat.js')))).toBe(false);
+  });
   test('the hiring product and its judges are gone from the backend tree', () => {
     const forbiddenFiles = [
       'backend/routes/company.js', 'backend/routes/webhooks.js', 'backend/routes/editorials.js',

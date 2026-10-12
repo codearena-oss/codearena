@@ -14,6 +14,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 
 const FORBIDDEN_PATHS = [
+  /(^|\/)(assessmentIntegrityEvents|assessmentIntegrityCalibrationCases|assessmentIntegrityBenchmark|editTraceAnalysis|cameraProctoring|integrityRedaction|authorshipFollowUp|authorshipReplay|integrityFingerprint|starterCorpusIntegrity|codepairIntegritySignals|AntiCheatSuite|AttentionCheck)(\.|\/)/i,
   /^backend\/data\/problems\//, /^backend\/scripts\/generatedSolutions\//, /^backend\/calibration\//,
   /^backend\/routes\/company\.js$/, /^backend\/services\/(aiCritique|findingsJudge|systemDesignJudge|codepairSocket|codeWrapper|inputParser|validateSolutionLegacy)\.js$/,
   /(^|\/)\.env(\.|$)(?!example$)/, /\.(sqlite|sqlite3|db)$/, /\.(pem|key|p12)$/, /^frontend\/\.vercel\//,
@@ -23,6 +24,7 @@ const FORBIDDEN_PATHS = [
 // Words that only the other product used. Generic words (candidate, interview)
 // are allowed because the consumer product uses them in ordinary sentences.
 const FORBIDDEN_TEXT = [
+  /assessmentIntegrityEvents|editTraceAnalysis|summarizeAssessmentIntegrity|classifyAssessmentEvent|assessmentIntegrityCalibrationCases|authorshipReplayPresentation/,
   /deveval/i, /recruiter/i, /take-?home assessment/i, /codepair/i, /hiring manager/i,
   /\bb2b\b/i, /hiring workflow/i,
   /assessment_sessions?/i, /ats_connections?/i, /aiCritiqueTemplates/, /findingsJudge/, /systemDesignJudge/,
@@ -100,4 +102,6 @@ function main() {
   console.log(`Boundary check passed: ${files.length} files listed, ${scanned} text files scanned, nothing forbidden found.`);
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { FORBIDDEN_PATHS, FORBIDDEN_TEXT };

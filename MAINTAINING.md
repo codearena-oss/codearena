@@ -84,6 +84,14 @@ To restore service, configure dedicated provider credentials, remove the mainten
 
 ## Moderation
 
+### Integrity implementation boundary
+
+The public battle-integrity implementation is developed independently for this project's players. Do not import private assessment detection engines, proctoring modules, edit-trace analysis, calibration fixtures, scoring thresholds or their tests from another product. The publish guard checks known private module names and identifiers, including copies under renamed paths. Human review is still required; this is not a general detector of copied code.
+
+Generic UI state, account security and community moderation can remain public. New community-developed integrity techniques are welcome when contributors have the right to publish them. Validate detection and false-positive behavior before enabling them for players.
+
+The project's license governs community contributions. Do not assume maintaining the project grants additional rights to incorporate others' contributions into proprietary software. Before any such reuse, record the source revision, authors and dependencies, and obtain a legal review of the applicable licenses and any separate permissions. No contributor has granted extra rights merely because this guide describes that review.
+
 - Players can report users. Usernames go through a profanity filter.
 - Gallery games run in a sandboxed frame (`sandbox="allow-scripts"`, no same-origin access), so a game cannot touch a player's account.
 - Publishing a game runs automated checks first.
