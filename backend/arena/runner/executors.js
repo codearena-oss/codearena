@@ -60,20 +60,103 @@ function judge0Executor({ url, authToken, rapidApiKey, rapidApiHost, timeoutMs =
   }
 }
 
-// Runs code directly on this machine with node/python3. NOT a sandbox.
+// Runs code directly on this machine with node/python3/go. NOT a sandbox.
 // Only for validating the trusted reference solutions and local development.
 function localExecutor({ allowUntrusted = false } = {}) {
   if (!allowUntrusted && process.env.NODE_ENV === 'production') {
     throw new Error('The local executor is not a sandbox and cannot run in production')
   }
-  const commands = { javascript: 'node', python: 'python3' }
-  return function execute({ language, source, stdin, timeLimitSeconds = 3 }) {
-    return new Promise(resolve => {
-      const started = Date.now()
+  const commands = {
+    javascript: { command: 'node', ext: 'js' },
+    typescript: { command: 'node', ext: 'js' },
+    python: { command: 'python3', ext: 'py' },
+  }
+  return async function execute({ language, source, stdin, timeLimitSeconds = 3 }) {
+    const started = Date.now()
+
+    // Handle Go separately to support explicit compilation, type-checking errors as compile_error, and reliable process cleanup
+    if (language === 'go') {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codearena-run-'))
-      const file = path.join(dir, language === 'python' ? 'solution.py' : 'solution.js')
+      const srcFile = path.join(dir, 'solution.go')
+      const binFile = path.join(dir, 'solution' + (os.platform() === 'win32' ? '.exe' : ''))
+      fs.writeFileSync(srcFile, source)
+
+      try {
+        const buildResult = await new Promise((resolve) => {
+          const compiler = spawn('go', ['build', '-o', binFile, srcFile])
+          let stderr = ''
+          compiler.stderr.on('data', chunk => { stderr += chunk })
+          compiler.on('close', code => {
+            resolve({ code, stderr })
+          })
+        })
+
+        if (buildResult.code !== 0) {
+          fs.rmSync(dir, { recursive: true, force: true })
+          return { status: 'compile_error', stdout: '', stderr: buildResult.stderr, timeMs: Date.now() - started }
+        }
+      } catch (error) {
+        fs.rmSync(dir, { recursive: true, force: true })
+        return { status: 'unavailable', stdout: '', stderr: error.message, timeMs: Date.now() - started }
+      }
+
+      return new Promise(resolve => {
+        const child = spawn(binFile, [], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          detached: os.platform() !== 'win32',
+        })
+        let stdout = ''
+        let stderr = ''
+        let timedOut = false
+        const timer = setTimeout(() => {
+          timedOut = true
+          try {
+            if (os.platform() !== 'win32') {
+              process.kill(-child.pid, 'SIGKILL')
+            } else {
+              child.kill('SIGKILL')
+            }
+          } catch {}
+        }, timeLimitSeconds * 1000)
+
+        child.stdout.on('data', chunk => { stdout += chunk })
+        child.stderr.on('data', chunk => { stderr += chunk })
+        child.on('close', code => {
+          clearTimeout(timer)
+          try { fs.rmSync(dir, { recursive: true, force: true }) } catch {}
+          const timeMs = Date.now() - started
+          if (timedOut) return resolve({ status: 'time_limit', stdout, stderr, timeMs })
+          if (code !== 0) {
+            return resolve({ status: 'runtime_error', stdout, stderr, timeMs })
+          }
+          resolve({ status: 'ok', stdout, stderr, timeMs })
+        })
+        child.on('error', error => {
+          clearTimeout(timer)
+          try { fs.rmSync(dir, { recursive: true, force: true }) } catch {}
+          resolve({ status: 'unavailable', stdout: '', stderr: error.message, timeMs: Date.now() - started })
+        })
+        if (stdin) {
+          child.stdin.write(stdin)
+        }
+        child.stdin.end()
+      })
+    }
+
+    const config = commands[language]
+    if (!config) {
+      return { status: 'unavailable', stdout: '', stderr: `Unsupported local language: ${language}`, timeMs: 0 }
+    }
+
+    return new Promise(resolve => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codearena-run-'))
+      const file = path.join(dir, `solution.${config.ext}`)
       fs.writeFileSync(file, source)
-      const child = spawn(commands[language], [file], { stdio: ['pipe', 'pipe', 'pipe'] })
+      
+      const cmd = config.command
+      const args = [file]
+
+      const child = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'] })
       let stdout = ''
       let stderr = ''
       let timedOut = false
@@ -86,7 +169,7 @@ function localExecutor({ allowUntrusted = false } = {}) {
         const timeMs = Date.now() - started
         if (timedOut) return resolve({ status: 'time_limit', stdout, stderr, timeMs })
         if (code !== 0) {
-          const syntax = /SyntaxError|IndentationError/.test(stderr)
+          const syntax = /SyntaxError|IndentationError|syntax error/i.test(stderr)
           return resolve({ status: syntax ? 'compile_error' : 'runtime_error', stdout, stderr, timeMs })
         }
         resolve({ status: 'ok', stdout, stderr, timeMs })

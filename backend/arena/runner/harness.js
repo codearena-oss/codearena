@@ -17,11 +17,14 @@ const LANGUAGES = {
   javascript: { label: 'JavaScript', judge0Id: 63 },
   python: { label: 'Python 3', judge0Id: 71 },
   typescript: { label: 'TypeScript', judge0Id: 74 },
+  go: { label: 'Go', judge0Id: 60 },
 }
 
 function functionNameFor(problem, language) {
   const fn = problem.function
-  return language === 'python' ? fn.pythonName : fn.name
+  if (language === 'python') return fn.pythonName
+  if (language === 'go') return fn.goName || fn.name
+  return fn.name
 }
 
 function javascriptProgram(code, name, marker, typescript = false) {
@@ -71,6 +74,102 @@ __codearena_main()
 `
 }
 
+function goProgram(code, name, marker, problem) {
+  const mapType = (t) => {
+    if (t === 'integer') return 'int'
+    if (t === 'number') return 'float64'
+    if (t === 'boolean') return 'bool'
+    if (t.endsWith('[]')) return `[]${mapType(t.slice(0, -2))}`
+    return 'string'
+  }
+
+  const params = problem && problem.function && problem.function.params ? problem.function.params : []
+
+  const paramDecls = params.map((p, idx) => `
+    var arg${idx} ${mapType(p.type)}
+    if err := json.Unmarshal(test.Args[${idx}], &arg${idx}); err != nil {
+      results = append(results, TestResult{Ok: false, Error: fmt.Sprintf("Failed to unmarshal argument %d: %v", ${idx}, err)})
+      continue
+    }
+  `).join('\n')
+
+  const argList = params.map((_, idx) => `arg${idx}`).join(', ')
+
+  return `package main
+
+import (
+  "encoding/json"
+  "fmt"
+  "io/ioutil"
+  "os"
+  "reflect"
+)
+
+${code}
+
+type TestInput struct {
+  Tests []struct {
+    Args []json.RawMessage \`json:"args"\`
+  } \`json:"tests"\`
+}
+
+type TestResult struct {
+  Ok    bool        \`json:"ok"\`
+  Value interface{} \`json:"value"\`
+  Error string      \`json:"error,omitempty"\`
+}
+
+func main() {
+  inputData, err := ioutil.ReadAll(os.Stdin)
+  if err != nil {
+    return
+  }
+
+  var input TestInput
+  if err := json.Unmarshal(inputData, &input); err != nil {
+    return
+  }
+
+  results := []TestResult{}
+
+  for _, test := range input.Tests {
+    if len(test.Args) < ${params.length} {
+      results = append(results, TestResult{Ok: false, Error: "Insufficient arguments provided"})
+      continue
+    }
+
+    ${paramDecls}
+
+    func() {
+      defer func() {
+        if r := recover(); r != nil {
+          results = append(results, TestResult{
+            Ok:    false,
+            Error: fmt.Sprintf("Panic: %v", r),
+          })
+        }
+      }()
+
+      res := ${name}(${argList})
+
+      var val interface{} = res
+      if reflect.TypeOf(res) != nil && reflect.TypeOf(res).Kind() == reflect.Slice && reflect.ValueOf(res).IsNil() {
+        val = []interface{}{}
+      }
+
+      results = append(results, TestResult{
+        Ok:    true,
+        Value: val,
+      })
+    }()
+  }
+
+  out, _ := json.Marshal(results)
+  fmt.Printf("\\n${marker}\\n%s\\n", string(out))
+}
+`
+}
+
 function buildProgram({ language, code, problem, nonce }) {
   if (!/^[a-f0-9]{16,}$/.test(nonce || '')) throw new Error('A random hex nonce is required')
   if (!LANGUAGES[language]) throw new Error(`Unsupported language: ${language}`)
@@ -78,6 +177,7 @@ function buildProgram({ language, code, problem, nonce }) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error(`Invalid function name: ${name}`)
   const marker = markerFor(nonce)
   if (language === 'python') return pythonProgram(code, name, marker)
+  if (language === 'go') return goProgram(code, name, marker, problem)
   return javascriptProgram(code, name, marker, language === 'typescript')
 }
 
@@ -109,6 +209,23 @@ function starterCode(problem, language) {
   if (language === 'typescript') {
     const typed = fn.params.map(p => `${p.name}: ${tsType(p.type)}`)
     return `function ${fn.name}(${typed.join(', ')}): ${tsType(fn.returns)} {\n  // Your code here\n}\n`
+  }
+  if (language === 'go') {
+    const mapType = (t) => {
+      if (t === 'integer') return 'int'
+      if (t === 'number') return 'float64'
+      if (t === 'boolean') return 'bool'
+      if (t.endsWith('[]')) return `[]${mapType(t.slice(0, -2))}`
+      return 'string'
+    }
+    const typed = fn.params.map(p => `${p.name} ${mapType(p.type)}`)
+    const retType = mapType(fn.returns)
+    let defaultReturn = '0'
+    if (retType === 'string') defaultReturn = '""'
+    else if (retType === 'bool') defaultReturn = 'false'
+    else if (retType.startsWith('[]')) defaultReturn = 'nil'
+
+    return `func ${fn.name}(${typed.join(', ')}) ${retType} {\n  // Your code here\n  return ${defaultReturn}\n}\n`
   }
   return `function ${fn.name}(${params.join(', ')}) {\n  // Your code here\n}\n`
 }
