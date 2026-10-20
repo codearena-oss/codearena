@@ -85,14 +85,26 @@ function localExecutor({ allowUntrusted = false } = {}) {
         const buildResult = await new Promise((resolve) => {
           const compiler = spawn('go', ['build', '-o', binFile, srcFile])
           let stderr = ''
+          let spawnError = null
+
           compiler.stderr.on('data', chunk => { stderr += chunk })
+          compiler.on('error', err => {
+            spawnError = err
+            resolve({ code: -1, stderr: err.message })
+          })
           compiler.on('close', code => {
-            resolve({ code, stderr })
+            if (!spawnError) {
+              resolve({ code, stderr })
+            }
           })
         })
 
         if (buildResult.code !== 0) {
           fs.rmSync(dir, { recursive: true, force: true })
+          const isMissing = buildResult.stderr.includes('ENOENT') || /not found|no such file/i.test(buildResult.stderr)
+          if (isMissing) {
+            return { status: 'unavailable', stdout: '', stderr: `Go compiler not found: ${buildResult.stderr}`, timeMs: Date.now() - started }
+          }
           return { status: 'compile_error', stdout: '', stderr: buildResult.stderr, timeMs: Date.now() - started }
         }
       } catch (error) {

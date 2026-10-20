@@ -6,10 +6,6 @@
 // JSON array of results. Anything the player prints themselves stays on stdout
 // before the marker and is returned separately as their console output.
 
-// The marker carries a per-run random nonce so a player's own prints cannot
-// pose as driver output. (A hostile program could still dig the nonce out of
-// its own source, which is why hosted instances should also keep some tests
-// unpublished: see docs/problems.md.)
 const RESULT_MARKER = '__CODEARENA_RESULTS__'
 const markerFor = nonce => `${RESULT_MARKER}${nonce}__`
 
@@ -20,6 +16,27 @@ const LANGUAGES = {
   go: { label: 'Go', judge0Id: 60 },
 }
 
+const GO_KEYWORDS = new Set([
+  'break', 'case', 'chan', 'const', 'continue', 'default', 'defer', 'else',
+  'fallthrough', 'for', 'func', 'go', 'goto', 'if', 'import', 'interface',
+  'map', 'package', 'range', 'return', 'select', 'struct', 'switch', 'type', 'var'
+])
+
+function sanitizeParamName(name) {
+  if (GO_KEYWORDS.has(name) || name === 'map') {
+    return `p_${name}`
+  }
+  return name
+}
+
+function cleanCandidateCode(rawCode) {
+  if (!rawCode) return ''
+  let cleaned = rawCode.replace(/^\s*package\s+\w+/gm, '')
+  cleaned = cleaned.replace(/^\s*import\s*\([\s\S]*?\)/gm, '')
+  cleaned = cleaned.replace(/^\s*import\s+"[^"]+"\s*/gm, '')
+  return cleaned
+}
+
 function functionNameFor(problem, language) {
   const fn = problem.function
   if (language === 'python') return fn.pythonName
@@ -28,7 +45,6 @@ function functionNameFor(problem, language) {
 }
 
 function javascriptProgram(code, name, marker, typescript = false) {
-  // tsc needs the Node globals declared; at runtime this is plain Node.
   const prelude = typescript ? 'declare var require: any; declare var process: any;\n' : ''
   return `${prelude}${code}
 
@@ -85,15 +101,19 @@ function goProgram(code, name, marker, problem) {
 
   const params = problem && problem.function && problem.function.params ? problem.function.params : []
 
-  const paramDecls = params.map((p, idx) => `
-    var arg${idx} ${mapType(p.type)}
-    if err := json.Unmarshal(test.Args[${idx}], &arg${idx}); err != nil {
-      results = append(results, TestResult{Ok: false, Error: fmt.Sprintf("Failed to unmarshal argument %d: %v", ${idx}, err)})
+  const paramDecls = params.map((p, idx) => {
+    const cleanName = sanitizeParamName(p.name)
+    return `
+    var ${cleanName} ${mapType(p.type)}
+    if err := json.Unmarshal(test.Args[${idx}], &${cleanName}); err != nil {
+      results = append(results, TestResult{Ok: false, Error: fmt.Sprintf("Decoding error for argument %d (${p.name}): %v", ${idx}, err)})
       continue
     }
-  `).join('\n')
+  `
+  }).join('\n')
 
-  const argList = params.map((_, idx) => `arg${idx}`).join(', ')
+  const argList = params.map(p => sanitizeParamName(p.name)).join(', ')
+  const sanitizedCode = cleanCandidateCode(code)
 
   return `package main
 
@@ -105,7 +125,7 @@ import (
   "reflect"
 )
 
-${code}
+${sanitizedCode}
 
 type TestInput struct {
   Tests []struct {
@@ -185,7 +205,6 @@ function buildStdin(tests) {
   return JSON.stringify({ tests: tests.map(test => ({ args: test.args })) })
 }
 
-// Splits raw stdout into the player's own output and the driver's results.
 function parseOutput(stdout, nonce) {
   const text = stdout || ''
   const marker = markerFor(nonce)
@@ -201,13 +220,13 @@ function parseOutput(stdout, nonce) {
 
 function starterCode(problem, language) {
   const fn = problem.function
-  const params = fn.params.map(p => p.name)
+  const params = fn.params.map(p => sanitizeParamName(p.name))
   if (language === 'python') {
     const pyParams = params.map(toSnakeCase)
     return `def ${fn.pythonName}(${pyParams.join(', ')}):\n    # Your code here\n    pass\n`
   }
   if (language === 'typescript') {
-    const typed = fn.params.map(p => `${p.name}: ${tsType(p.type)}`)
+    const typed = fn.params.map((p, i) => `${params[i]}: ${tsType(p.type)}`)
     return `function ${fn.name}(${typed.join(', ')}): ${tsType(fn.returns)} {\n  // Your code here\n}\n`
   }
   if (language === 'go') {
@@ -218,7 +237,7 @@ function starterCode(problem, language) {
       if (t.endsWith('[]')) return `[]${mapType(t.slice(0, -2))}`
       return 'string'
     }
-    const typed = fn.params.map(p => `${p.name} ${mapType(p.type)}`)
+    const typed = fn.params.map((p, i) => `${params[i]} ${mapType(p.type)}`)
     const retType = mapType(fn.returns)
     let defaultReturn = '0'
     if (retType === 'string') defaultReturn = '""'
@@ -230,7 +249,6 @@ function starterCode(problem, language) {
   return `function ${fn.name}(${params.join(', ')}) {\n  // Your code here\n}\n`
 }
 
-// Problem types use "integer"; TypeScript says number.
 function tsType(type) {
   return String(type || 'any').replace(/integer|float/g, 'number')
 }

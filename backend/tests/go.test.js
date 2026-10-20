@@ -2,6 +2,7 @@
 
 const { execSync } = require('node:child_process')
 const { buildProgram, starterCode } = require('../arena/runner/harness')
+const { localExecutor } = require('../arena/runner/executors')
 
 const sampleProblem = {
   function: {
@@ -14,6 +15,16 @@ const sampleProblem = {
     returns: 'integer[]'
   }
 }
+
+let hasGo = false
+try {
+  execSync('go version', { stdio: 'ignore' })
+  hasGo = true
+} catch {
+  hasGo = false
+}
+
+const goTest = hasGo ? test : test.skip
 
 describe('Go harness & starter code', () => {
   test('generates valid starter code', () => {
@@ -34,21 +45,7 @@ describe('Go harness & starter code', () => {
     expect(program).toContain('recover()')
   })
 
-  test('e2e Go execution (skipped if go binary is missing)', () => {
-    let hasGo = false
-    try {
-      execSync('go version', { stdio: 'ignore' })
-      hasGo = true
-    } catch {
-      hasGo = false
-    }
-
-    if (!hasGo) {
-      console.log('Skipping E2E Go test: `go` binary not found on PATH')
-      return
-    }
-
-    const { localExecutor } = require('../arena/runner/executors')
+  goTest('e2e Go execution works correctly', async () => {
     const executor = localExecutor({ allowUntrusted: true })
 
     const code = `
@@ -67,11 +64,49 @@ func twoSum(nums []int, target int) []int {
       tests: [{ args: [[2, 7, 11, 15], 9] }]
     })
 
-    return executor({ language: 'go', source: program, stdin, timeLimitSeconds: 3 }).then(res => {
-      expect(res.status).toBe('ok')
-      expect(res.stdout).toContain('__CODEARENA_RESULTS__')
-      expect(res.stdout).toContain('"ok":true')
-      expect(res.stdout).toContain('"value":[0,1]')
+    const res = await executor({ language: 'go', source: program, stdin, timeLimitSeconds: 3 })
+    expect(res.status).toBe('ok')
+    expect(res.stdout).toContain('__CODEARENA_RESULTS__')
+    expect(res.stdout).toContain('"ok":true')
+    expect(res.stdout).toContain('"value":[0,1]')
+  }, 10000)
+
+  goTest('handles Go compile errors correctly', async () => {
+    const executor = localExecutor({ allowUntrusted: true })
+    const invalidCode = 'this is not valid go code'
+    const program = buildProgram({
+      language: 'go',
+      code: invalidCode,
+      problem: sampleProblem,
+      nonce: '0123456789abcdef0123456789abcdef'
     })
+
+    const res = await executor({ language: 'go', source: program, stdin: '{"tests":[]}', timeLimitSeconds: 3 })
+    expect(res.status).toBe('compile_error')
+    expect(res.stderr).toBeTruthy()
+  })
+
+  goTest('handles Go runtime panics safely', async () => {
+    const executor = localExecutor({ allowUntrusted: true })
+    const panicCode = `
+func twoSum(nums []int, target int) []int {
+  panic("intentional test panic")
+}
+`
+    const program = buildProgram({
+      language: 'go',
+      code: panicCode,
+      problem: sampleProblem,
+      nonce: '0123456789abcdef0123456789abcdef'
+    })
+
+    const stdin = JSON.stringify({
+      tests: [{ args: [[1, 2], 3] }]
+    })
+
+    const res = await executor({ language: 'go', source: program, stdin, timeLimitSeconds: 3 })
+    expect(res.status).toBe('ok')
+    expect(res.stdout).toContain('"ok":false')
+    expect(res.stdout).toContain('Panic: intentional test panic')
   })
 })
