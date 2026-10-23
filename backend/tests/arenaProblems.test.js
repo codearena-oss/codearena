@@ -34,7 +34,7 @@ describe('problemsLoader (open problem set)', () => {
     expect(view.tests).toBeUndefined();
     expect(view.compare).toBeUndefined();
     expect(JSON.stringify(view)).not.toContain('"args"');
-    expect(view.runnableLanguages).toEqual(['javascript', 'python', 'typescript']);
+    expect(view.runnableLanguages).toEqual(['javascript', 'python', 'typescript', 'go']);
     expect(view.starterCode.javascript).toContain('function longestWinStreak(results)');
     expect(view.starterCode.python).toContain('def longest_win_streak(results)');
     expect(view.starterCode.typescript).toContain('results: string');
