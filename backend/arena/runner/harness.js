@@ -31,9 +31,8 @@ function sanitizeParamName(name) {
 
 function cleanCandidateCode(rawCode) {
   if (!rawCode) return ''
+  // Only remove package declarations, but leave import blocks and statements intact so user imports like "container/heap" or "sort" are preserved.
   let cleaned = rawCode.replace(/^\s*package\s+\w+/gm, '')
-  cleaned = cleaned.replace(/^\s*import\s*\([\s\S]*?\)/gm, '')
-  cleaned = cleaned.replace(/^\s*import\s+"[^"]+"\s*/gm, '')
   return cleaned
 }
 
@@ -102,17 +101,17 @@ function goProgram(code, name, marker, problem) {
   const params = problem && problem.function && problem.function.params ? problem.function.params : []
 
   const paramDecls = params.map((p, idx) => {
-    const cleanName = sanitizeParamName(p.name)
+    const argVar = `arg${idx}`
     return `
-    var ${cleanName} ${mapType(p.type)}
-    if err := json.Unmarshal(test.Args[${idx}], &${cleanName}); err != nil {
+    var ${argVar} ${mapType(p.type)}
+    if err := json.Unmarshal(test.Args[${idx}], &${argVar}); err != nil {
       results = append(results, TestResult{Ok: false, Error: fmt.Sprintf("Decoding error for argument %d (${p.name}): %v", ${idx}, err)})
       continue
     }
   `
   }).join('\n')
 
-  const argList = params.map(p => sanitizeParamName(p.name)).join(', ')
+  const argList = params.map((_, idx) => `arg${idx}`).join(', ')
   const sanitizedCode = cleanCandidateCode(code)
 
   return `package main

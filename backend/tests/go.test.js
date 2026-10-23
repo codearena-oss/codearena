@@ -45,6 +45,58 @@ describe('Go harness & starter code', () => {
     expect(program).toContain('recover()')
   })
 
+  goTest('preserves user imports such as container/heap and sort', () => {
+    const importCode = `
+import (
+  "container/heap"
+  "sort"
+)
+func twoSum(nums []int, target int) []int {
+  return nums
+}
+`
+    const program = buildProgram({
+      language: 'go',
+      code: importCode,
+      problem: sampleProblem,
+      nonce: '0123456789abcdef0123456789abcdef'
+    })
+    expect(program).toContain('"container/heap"')
+    expect(program).toContain('"sort"')
+  })
+
+  goTest('avoids argument name collision with driver variables like results', async () => {
+    const collisionProblem = {
+      function: {
+        name: 'winStreak',
+        goName: 'winStreak',
+        params: [
+          { name: 'results', type: 'string[]' }
+        ],
+        returns: 'integer'
+      }
+    }
+    const collisionCode = `
+func winStreak(results []string) int {
+  return len(results)
+}
+`
+    const program = buildProgram({
+      language: 'go',
+      code: collisionCode,
+      problem: collisionProblem,
+      nonce: '0123456789abcdef0123456789abcdef'
+    })
+    const executor = localExecutor({ allowUntrusted: true })
+    const stdin = JSON.stringify({
+      tests: [{ args: [["win", "loss"]] }]
+    })
+    const res = await executor({ language: 'go', source: program, stdin, timeLimitSeconds: 3 })
+    expect(res.status).toBe('ok')
+    expect(res.stdout).toContain('"ok":true')
+    expect(res.stdout).toContain('"value":2')
+  }, 10000)
+
   goTest('e2e Go execution works correctly', async () => {
     const executor = localExecutor({ allowUntrusted: true })
 
