@@ -1,12 +1,11 @@
 'use strict'
 
-// Checks every problem in problems/ against its two reference solutions.
+// Checks every problem in problems/ against its reference solutions.
 //   node scripts/validate-problems.js            validate
 //   node scripts/validate-problems.js --fill     fill missing "expected" values
 //                                                from the JavaScript reference first
-// A problem is valid only when the JavaScript AND Python references both pass
-// every example and test. The two references are written independently, so a
-// mistake in one shows up as a disagreement.
+// A problem is valid only when its reference solutions pass
+// every example and test.
 
 const fs = require('node:fs')
 const path = require('node:path')
@@ -34,6 +33,12 @@ async function main() {
     const js = fs.readFileSync(path.join(ROOT, 'solutions', `${problem.id}.js`), 'utf8')
     const py = fs.readFileSync(path.join(ROOT, 'solutions', `${problem.id}.py`), 'utf8')
 
+    const solutionsToTest = [['javascript', js], ['python', py]]
+    const goSolPath = path.join(ROOT, 'solutions', `${problem.id}.go`)
+    if (fs.existsSync(goSolPath)) {
+      solutionsToTest.push(['go', fs.readFileSync(goSolPath, 'utf8')])
+    }
+
     if (fill && all.some(t => !('expected' in t))) {
       const run = await runTests({ execute, problem, language: 'javascript', code: js, tests: all.map(t => ({ args: t.args, expected: null })) })
       if (!run.cases.length) throw new Error(`${problem.id}: JS reference did not run: ${run.error}`)
@@ -46,7 +51,7 @@ async function main() {
     }
 
     const problemErrors = []
-    for (const [language, code] of [['javascript', js], ['python', py]]) {
+    for (const [language, code] of solutionsToTest) {
       const result = await runTests({ execute, problem, language, code, tests: all })
       if (result.status !== 'passed') {
         const firstBad = result.cases.findIndex(c => !c.passed)
@@ -60,7 +65,8 @@ async function main() {
       failures++
       console.log(`FAIL ${problem.id}: ${problemErrors.join(' | ')}`)
     } else {
-      console.log(`ok   ${problem.id} (${all.length} cases, both references agree)`)
+      const langsTested = solutionsToTest.map(([l]) => l).join(', ')
+      console.log(`ok   ${problem.id} (${all.length} cases, references agree: ${langsTested})`)
     }
   }
 

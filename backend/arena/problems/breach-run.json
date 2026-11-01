@@ -2,6 +2,9 @@
   "id": "breach-run",
   "title": "Breach Run",
   "difficulty": "hard",
+  "excludedLanguages": [
+    "go"
+  ],
   "tags": [
     "graphs",
     "bfs"
