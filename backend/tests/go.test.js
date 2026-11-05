@@ -65,6 +65,34 @@ func twoSum(nums []int, target int) []int {
     expect(program).toContain('"sort"')
   })
 
+  goTest('handles user import of fmt without redeclaration collision', async () => {
+    const codeWithFmt = `
+import "fmt"
+
+func twoSum(nums []int, target int) []int {
+  fmt.Println("Debugging inside user code")
+  return []int{0, 1}
+}
+`
+    const program = buildProgram({
+      language: 'go',
+      code: codeWithFmt,
+      problem: sampleProblem,
+      nonce: '0123456789abcdef0123456789abcdef'
+    })
+
+    const executor = localExecutor({ allowUntrusted: true })
+    const stdin = JSON.stringify({
+      tests: [{ args: [[2, 7, 11, 15], 9] }]
+    })
+
+    const res = await executor({ language: 'go', source: program, stdin, timeLimitSeconds: 3 })
+    expect(res.status).toBe('ok')
+    expect(res.stdout).toContain('__CODEARENA_RESULTS__')
+    expect(res.stdout).toContain('"ok":true')
+    expect(res.stdout).toContain('"value":[0,1]')
+  }, 10000)
+
   goTest('avoids argument name collision with driver variables like results', async () => {
     const collisionProblem = {
       function: {
@@ -161,4 +189,53 @@ func twoSum(nums []int, target int) []int {
     expect(res.stdout).toContain('"ok":false')
     expect(res.stdout).toContain('Panic: intentional test panic')
   })
+
+  test('handles missing compiler binary based on spawn error', async () => {
+    const executor = localExecutor({ allowUntrusted: true, goPath: 'non_existent_go_binary_path' })
+    const program = buildProgram({
+      language: 'go',
+      code: 'func twoSum(nums []int, target int) []int { return []int{0,1} }',
+      problem: sampleProblem,
+      nonce: '0123456789abcdef0123456789abcdef'
+    })
+
+    const res = await executor({ language: 'go', source: program, stdin: '{"tests":[]}', timeLimitSeconds: 3 })
+    expect(['unavailable', 'error', 'system_error']).toContain(res.status)
+  })
+
+  goTest('handles process timeout and ensures no lingering process', async () => {
+    const executor = localExecutor({ allowUntrusted: true })
+    const infiniteLoopCode = `
+import "time"
+
+func twoSum(nums []int, target int) []int {
+  for {
+    time.Sleep(100 * time.Millisecond)
+  }
+}
+`
+    const program = buildProgram({
+      language: 'go',
+      code: infiniteLoopCode,
+      problem: sampleProblem,
+      nonce: '0123456789abcdef0123456789abcdef'
+    })
+
+    const stdin = JSON.stringify({
+      tests: [{ args: [[1, 2], 3] }]
+    })
+
+    const startMs = Date.now()
+    const res = await executor({ language: 'go', source: program, stdin, timeLimitSeconds: 1 })
+    const elapsedMs = Date.now() - startMs
+
+    expect(res.status).toBe('timeout')
+    expect(elapsedMs).toBeLessThan(4000)
+
+    // Verify child process was killed
+    if (process.platform === 'linux' || process.platform === 'darwin') {
+      const psOutput = execSync('ps aux | grep "go run" | grep -v grep || true').toString()
+      expect(psOutput).not.toContain('twoSum')
+    }
+  }, 10000)
 })

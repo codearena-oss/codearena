@@ -104,8 +104,8 @@ function goProgram(code, name, marker, problem) {
     const argVar = `arg${idx}`
     return `
     var ${argVar} ${mapType(p.type)}
-    if err := json.Unmarshal(test.Args[${idx}], &${argVar}); err != nil {
-      results = append(results, TestResult{Ok: false, Error: fmt.Sprintf("Decoding error for argument %d (${p.name}): %v", ${idx}, err)})
+    if err := _driver_json.Unmarshal(test.Args[${idx}], &${argVar}); err != nil {
+      results = append(results, TestResult{Ok: false, Error: _driver_fmt.Sprintf("Decoding error for argument %d (${p.name}): %v", ${idx}, err)})
       continue
     }
   `
@@ -117,18 +117,18 @@ function goProgram(code, name, marker, problem) {
   return `package main
 
 import (
-  "encoding/json"
-  "fmt"
-  "io/ioutil"
-  "os"
-  "reflect"
+  _driver_json "encoding/json"
+  _driver_fmt "fmt"
+  _driver_ioutil "io/ioutil"
+  _driver_os "os"
+  _driver_reflect "reflect"
 )
 
 ${sanitizedCode}
 
 type TestInput struct {
   Tests []struct {
-    Args []json.RawMessage \`json:"args"\`
+    Args []_driver_json.RawMessage \`json:"args"\`
   } \`json:"tests"\`
 }
 
@@ -139,13 +139,13 @@ type TestResult struct {
 }
 
 func main() {
-  inputData, err := ioutil.ReadAll(os.Stdin)
+  inputData, err := _driver_ioutil.ReadAll(_driver_os.Stdin)
   if err != nil {
     return
   }
 
   var input TestInput
-  if err := json.Unmarshal(inputData, &input); err != nil {
+  if err := _driver_json.Unmarshal(inputData, &input); err != nil {
     return
   }
 
@@ -164,7 +164,7 @@ func main() {
         if r := recover(); r != nil {
           results = append(results, TestResult{
             Ok:    false,
-            Error: fmt.Sprintf("Panic: %v", r),
+            Error: _driver_fmt.Sprintf("Panic: %v", r),
           })
         }
       }()
@@ -172,7 +172,7 @@ func main() {
       res := ${name}(${argList})
 
       var val interface{} = res
-      if reflect.TypeOf(res) != nil && reflect.TypeOf(res).Kind() == reflect.Slice && reflect.ValueOf(res).IsNil() {
+      if _driver_reflect.TypeOf(res) != nil && _driver_reflect.TypeOf(res).Kind() == _driver_reflect.Slice && _driver_reflect.ValueOf(res).IsNil() {
         val = []interface{}{}
       }
 
@@ -183,8 +183,8 @@ func main() {
     }()
   }
 
-  out, _ := json.Marshal(results)
-  fmt.Printf("\\n${marker}\\n%s\\n", string(out))
+  out, _ := _driver_json.Marshal(results)
+  _driver_fmt.Printf("\\n${marker}\\n%s\\n", string(out))
 }
 `
 }
