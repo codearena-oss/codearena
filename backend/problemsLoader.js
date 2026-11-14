@@ -65,6 +65,10 @@ function toLegacyCase(problem, testCase) {
 function prepare(raw) {
   const examples = raw.examples || [];
   const tests = raw.tests || [];
+  const excluded = Array.isArray(raw.excludedLanguages) 
+    ? raw.excludedLanguages.map(l => String(l).toLowerCase()) 
+    : [];
+
   return {
     ...raw,
     difficulty: DIFFICULTY_LABEL[raw.difficulty] || raw.difficulty,
@@ -75,7 +79,7 @@ function prepare(raw) {
     // visibleCount rows are always the public examples.
     testCases: [...examples, ...tests].map(t => toLegacyCase(raw, t)),
     visibleCount: examples.length,
-    runnableLanguages: RUNNABLE_LANGUAGES
+    runnableLanguages: RUNNABLE_LANGUAGES.filter(lang => !excluded.includes(lang.toLowerCase()))
   };
 }
 
@@ -160,7 +164,7 @@ function getVisibleProblem(problem) {
   if (!problem) return null;
   const visible = visibleCount(problem);
   const starter = {};
-  for (const language of RUNNABLE_LANGUAGES) starter[language] = starterCode(problem, language);
+  for (const language of problem.runnableLanguages) starter[language] = starterCode(problem, language);
   return {
     id: problem.id,
     title: problem.title,
@@ -213,7 +217,8 @@ function getAgentProblems(difficulty) {
 
 function getLanguageRejection(problem, language) {
   if (!problem) return null;
-  if (problem.runnableLanguages.includes(language)) return null;
+  const langKey = String(language || '').toLowerCase();
+  if (problem.runnableLanguages.some(l => l.toLowerCase() === langKey)) return null;
   return {
     error: `${language} is not available for this problem`,
     languageRestricted: true,

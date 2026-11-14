@@ -35,6 +35,10 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
       - run: npm ci
       - name: Module load smoke
         run: node --check server.js
