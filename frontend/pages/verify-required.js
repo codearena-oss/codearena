@@ -101,15 +101,15 @@ export default function VerifyRequired() {
               </motion.div>
             </Float>
 
-            <h1 className="text-3xl font-bold mb-4">Check Your Email</h1>
+            <h1 className="text-3xl font-bold mb-4">Verify Your Email</h1>
             <p className="text-surface-400 mb-2">
-              We sent a verification link to
+              Your account email is
             </p>
             <p className="text-white font-medium mb-6">
               {user.email}
             </p>
             <p className="text-surface-500 text-sm mb-8">
-              Click the link in your email to verify your account and start using CodeArena.
+              Use the verification link in your inbox. If it has not arrived, request another email below.
             </p>
 
             <div className="flex flex-col gap-3">

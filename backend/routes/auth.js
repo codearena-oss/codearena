@@ -680,14 +680,15 @@ router.post('/register', chains.register, async (req, res, next) => {
         </div>
       `
     });
-    if (emailResult.success) {
+    if (emailResult?.success === true) {
       logger.info('[AUTH] Verification email sent to:', email);
     } else {
-      logger.error('[AUTH] Failed to send verification email:', emailResult.error);
+      logger.error('[AUTH] Verification email was not accepted by the provider');
     }
 
     res.status(201).json({
       success: true,
+      verification_email_sent: emailResult?.success === true,
       user: {
         id: user.id,
         email: user.email,
@@ -696,7 +697,9 @@ router.post('/register', chains.register, async (req, res, next) => {
         is_pro: false,
         email_verified: false
       },
-      message: 'Account created! Please check your email to verify your account.'
+      message: emailResult?.success === true
+        ? 'Account created! Please check your email to verify your account.'
+        : 'Account created, but we could not send your verification email. Sign in and request another verification email.'
     });
   } catch (err) {
     next(err);
@@ -807,10 +810,11 @@ router.post('/resend-verification', async (req, res, next) => {
         </div>
       `
     });
-    if (emailResult.success) {
+    if (emailResult?.success === true) {
       logger.info('[AUTH] Resent verification email to:', email);
     } else {
-      logger.error('[AUTH] Failed to resend verification email:', emailResult.error);
+      logger.error('[AUTH] Verification resend was not accepted by the provider');
+      return res.status(503).json({ success: false, code: 'verification_email_unavailable', error: 'We could not send a verification email. Please try again later.' });
     }
 
     res.json({ success: true, message: 'Verification email sent.' });

@@ -60,7 +60,7 @@ export default function Privacy() {
                 <ul className="text-surface-300 space-y-2 mb-4 list-disc list-inside">
                   <li><strong>Account Information:</strong> Username, email address, and password when you register</li>
                   <li><strong>Profile Information:</strong> Avatar, bio, and display preferences</li>
-                  <li><strong>Payment Information:</strong> Stripe securely processes one-time CreatorArena credit purchases and any existing legacy subscription billing. We do not store your full credit card number</li>
+                  <li><strong>Historical Payment Information:</strong> Stripe may retain records from earlier purchases or subscriptions. We do not store your full credit card number</li>
                   <li><strong>Feedback:</strong> Any comments, suggestions, or feedback you submit</li>
                 </ul>
 
@@ -85,7 +85,7 @@ export default function Privacy() {
                   <li><strong>Provide and Maintain the Service:</strong> Enable coding battles, matchmaking, practice mode, tournaments, weekly challenges, and leaderboards</li>
                   <li><strong>Social Features:</strong> Enable messaging between users, friend connections, and social interactions</li>
                   <li><strong>Tournament Operations:</strong> Manage tournament registrations, brackets, match scheduling, and prize distribution</li>
-                  <li><strong>Process Payments:</strong> Handle one-time CreatorArena credit purchases and support existing legacy subscription billing through Stripe</li>
+                  <li><strong>Historical Billing:</strong> Respond to any earlier payment, refund, or billing inquiries</li>
                   <li><strong>Improve User Experience:</strong> Analyze usage patterns to enhance functionality and features</li>
                   <li><strong>Communication:</strong> Send tournament notifications, weekly challenge alerts, service updates, and promotional content (if you opted in)</li>
                   <li><strong>Fair Play Enforcement:</strong> Monitor for cheating, abuse, and violations of terms of service</li>
@@ -104,7 +104,7 @@ export default function Privacy() {
                   <li><strong>During Battles and Tournaments:</strong> Your username, avatar, and ELO rating are visible to opponents, tournament participants, and on leaderboards</li>
                   <li><strong>Messages:</strong> Messages are delivered to recipients you choose. We do not share private messages with third parties except as required by law</li>
                   <li><strong>Friend Lists:</strong> Your friend connections are visible to your friends. You control who can send you friend requests in settings</li>
-                  <li><strong>Payment Processing:</strong> Stripe processes one-time CreatorArena credit purchases and existing legacy subscription billing. See Stripe's privacy policy for details</li>
+                  <li><strong>Historical Payment Processing:</strong> Stripe may retain earlier billing records. See Stripe's privacy policy for details</li>
                   <li><strong>Service Providers:</strong> Third-party vendors who help us operate the service (e.g., hosting, analytics, email). These providers are contractually obligated to protect your data</li>
                   <li><strong>Legal Requirements:</strong> When required by law, court order, or to protect our rights and safety</li>
                   <li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of assets (users will be notified)</li>

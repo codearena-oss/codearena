@@ -287,7 +287,8 @@ test('4. bot battle runs to a result', async ({ browser }) => {
   await page.getByRole('button', { name: /^start .* battle$/i }).click()
   await expect(page).toHaveURL(/\/battle\?id=.*isAgainstBot=true/, { timeout: 30000 })
   const ready = page.getByRole('button', { name: /^ready$/i })
-  if (await ready.isVisible({ timeout: 5000 }).catch(() => false)) await ready.click()
+  await expect(ready).toBeVisible({ timeout: 30000 })
+  await ready.click()
   await page.locator('.monaco-editor').first().waitFor({ timeout: 90000 })
   const problem = await currentProblemTitle(page, problems)
   await shot(page, '18-bot-battle-coding')
@@ -384,7 +385,7 @@ test('7. every page renders without console or page errors while signed in', asy
     '/matchmaking', '/messages', `/messages/${userB.user.id}`, '/modes', '/players', '/practice', '/pricing', '/privacy',
     '/problems', '/problems/win-streak', `/profile/${userA.user.username}`, '/profile', '/prompt-battle', '/prompt-practice',
     '/register', '/reset-password', '/settings/profile', '/terms', '/tournaments', '/tournaments/join/not-a-code',
-    '/unsubscribe', '/verify-email', '/verify-required', '/does-not-exist'
+    '/unsubscribe', '/verify-email', '/verify-email-change', '/verify-required', '/does-not-exist'
   ]
   for (const route of pages) {
     const before = errors.length
@@ -392,7 +393,7 @@ test('7. every page renders without console or page errors while signed in', asy
     await page.waitForTimeout(1500)
     const status = response ? response.status() : 0
     const body = await page.locator('body').innerText().catch(() => '')
-    const serverError = /Application error|Internal Server Error|Unhandled Runtime Error/i.test(body)
+    const serverError = !response || !body.trim() || /Application error|Internal Server Error|Unhandled Runtime Error/i.test(body)
     statuses.push(`${route} -> ${status}${serverError ? ' SERVER-ERROR' : ''}${errors.length > before ? ` (${errors.length - before} console errors)` : ''}`)
     if (serverError || status >= 500) await shot(page, `27-smoke${route.replace(/[^a-z0-9]+/gi, '-')}`)
   }

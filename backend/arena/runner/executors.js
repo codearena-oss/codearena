@@ -203,6 +203,7 @@ function localExecutor({ allowUntrusted = false } = {}) {
 // With nothing configured, development falls back to the local runner so a fresh
 // clone works; production refuses to start without a sandbox.
 function runnerChoice(env = process.env) {
+  if (env.CODEARENA_RUNNER === 'disabled') return { kind: 'disabled' }
   const rapidApiKey = env.RAPIDAPI_KEY || env.JUDGE0_RAPIDAPI_KEY
   const url = env.JUDGE0_URL || (rapidApiKey ? 'https://judge0-ce.p.rapidapi.com' : '')
   if (env.CODEARENA_RUNNER === 'local') {
@@ -220,6 +221,7 @@ function runnerChoice(env = process.env) {
 
 function describeRunner(env = process.env) {
   const choice = runnerChoice(env)
+  if (choice.kind === 'disabled') return 'Code runner: disabled for maintenance. Submissions are not graded.'
   if (choice.kind === 'judge0') return `Code runner: Judge0 at ${choice.url}${choice.rapidApiKey ? ' (RapidAPI)' : ''}`
   return choice.explicit
     ? 'Code runner: LOCAL (CODEARENA_RUNNER=local). Player code runs on this machine without a sandbox. Development only.'
@@ -228,6 +230,9 @@ function describeRunner(env = process.env) {
 
 function executorFromEnv(env = process.env) {
   const choice = runnerChoice(env)
+  if (choice.kind === 'disabled') {
+    return async () => ({ status: 'unavailable', stdout: '', stderr: 'Code execution is temporarily disabled.', timeMs: 0 })
+  }
   if (choice.kind === 'local') return localExecutor()
   return judge0Executor({
     url: choice.url,

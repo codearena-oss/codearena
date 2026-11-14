@@ -18,6 +18,7 @@ A guide for maintainers: how the project fits together, how changes reach codear
    - the publish boundary check;
    - backend: problem validation, a boot and health probe, and every test;
    - frontend: lint, tests and a production build.
+   - browser flows: practice, private and bot battles, matchmaking, and page rendering against an isolated local database without production credentials.
 2. Merging to `main` deploys automatically:
    - **backend** on Railway, using `railway.toml` at the repo root. Keep the service's Root Directory **empty**: the build and start commands already point into `backend/`.
    - **frontend** on Vercel, with Root Directory `frontend`.
@@ -37,7 +38,7 @@ A guide for maintainers: how the project fits together, how changes reach codear
 
 ## Costs and safety limits
 
-Every paid service has a cap, so a busy day cannot become a large bill.
+Application quotas limit normal use. Configure provider spending limits separately; application quotas do not protect against a stolen provider key.
 
 | Service | Used for | Cap |
 |---|---|---|
@@ -47,6 +48,28 @@ Every paid service has a cap, so a busy day cannot become a large bill.
 | Resend | Email | Key restricted to the codearena.co domain |
 
 Pricier models count more against the daily prompt budget (Opus 5, Sonnet 3, the rest 1), in `backend/services/promptBattleRunner.js`.
+
+## Hosted deployment isolation
+
+- Use dedicated provider credentials and resources for this deployment. A different repository or an avatar folder does not isolate a shared provider account.
+- Cloudinary: use a dedicated product environment with its own cloud name, API key and secret. Existing avatar URLs can remain readable; only assets owned by the configured environment are eligible for deletion.
+- RapidAPI: use a dedicated app/key for code execution and configure provider usage limits. A separate key alone does not guarantee separate billing or quota; verify the subscription settings.
+- Keep production secrets in the hosting provider, never in this repository, browser configuration, CI logs or test artifacts.
+- Give maintainers repository access and only the hosting projects they need. Require two-factor authentication for organization members after the owner has enrolled.
+- After replacing credentials, redeploy the backend from source, verify health and exercise an avatar upload and code run. Revoke superseded credentials only after confirming that no other deployment still needs them.
+
+The local browser suite does not verify production email delivery, provider credentials or hosting access. Before announcing a release, separately verify a new account's registration, email verification, login and code execution on the deployed site.
+
+### Provider maintenance
+
+Deploy support for these controls before enabling them:
+
+- `CODEARENA_RUNNER=disabled` keeps the API running but returns execution unavailable for code submissions and custom inputs. It overrides configured Judge0 credentials and never falls back to local execution. Practice and coding battles cannot complete normally while it is enabled.
+- `CODEARENA_AVATARS_DISABLED=1` rejects avatar uploads and deletions with HTTP 503 before processing images or contacting storage. Existing avatar URLs remain readable.
+
+These switches stop normal application calls; they do not protect credentials still present in the process from a server compromise. Remove affected provider secrets from the deployment and restart it to remove runtime access. Revoke old keys at the provider after all legitimate consumers have migrated. Old deployments may retain configuration, so do not roll back to a deployment containing retired credentials.
+
+To restore service, configure dedicated provider credentials, remove the maintenance switches, redeploy, and verify a code submission and an avatar change.
 
 ## When something breaks
 
@@ -60,6 +83,14 @@ Pricier models count more against the daily prompt budget (Opus 5, Sonnet 3, the
 - **Security report:** handle it privately as described in [SECURITY.md](SECURITY.md). Do not discuss it in public issues until it is fixed.
 
 ## Moderation
+
+### Integrity implementation boundary
+
+The public battle-integrity implementation is developed independently for this project's players. Do not import private assessment detection engines, proctoring modules, edit-trace analysis, calibration fixtures, scoring thresholds or their tests from another product. The publish guard checks known private module names and identifiers, including copies under renamed paths. Human review is still required; this is not a general detector of copied code.
+
+Generic UI state, account security and community moderation can remain public. New community-developed integrity techniques are welcome when contributors have the right to publish them. Validate detection and false-positive behavior before enabling them for players.
+
+The project's license governs community contributions. Do not assume maintaining the project grants additional rights to incorporate others' contributions into proprietary software. Before any such reuse, record the source revision, authors and dependencies, and obtain a legal review of the applicable licenses and any separate permissions. No contributor has granted extra rights merely because this guide describes that review.
 
 - Players can report users. Usernames go through a profanity filter.
 - Gallery games run in a sandboxed frame (`sandbox="allow-scripts"`, no same-origin access), so a game cannot touch a player's account.
@@ -76,7 +107,7 @@ Act on reports promptly. Remove content that breaks the [Terms](https://codearen
 
 ## Good next things
 
-- Languages: [Java #1](https://github.com/sennaicodes/codearena/issues/1), [C++ #2](https://github.com/sennaicodes/codearena/issues/2), [Go #3](https://github.com/sennaicodes/codearena/issues/3).
+- Languages: [Java #1](https://github.com/codearena-oss/codearena/issues/1), [C++ #2](https://github.com/codearena-oss/codearena/issues/2), [Go #3](https://github.com/codearena-oss/codearena/issues/3).
 - More problems (the best first contribution for newcomers).
 - The win/loss backfill above.
 - A private problem set for ranked play.

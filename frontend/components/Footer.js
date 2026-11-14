@@ -59,7 +59,7 @@ export default function Footer({ onFeedbackClick, onBugReportClick, onFeatureReq
               <span>Follow us</span>
             </a>
             <a
-              href="https://github.com/sennaicodes/codearena"
+              href="https://github.com/codearena-oss/codearena"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-3 flex w-fit items-center gap-2 text-sm text-surface-400 hover:text-primary-400 transition-colors duration-200"

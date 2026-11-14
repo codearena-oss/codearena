@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import { Wand2, Play, Save, Upload, Github, RotateCcw, Gamepad2, Loader2, Check, AlertCircle, AlertTriangle, ChevronDown, FolderOpen, ArrowUp, Coins, Zap, HelpCircle } from 'lucide-react';
+import { Wand2, Play, Save, Upload, Github, RotateCcw, Gamepad2, Loader2, Check, AlertCircle, AlertTriangle, ChevronDown, FolderOpen, ArrowUp, Zap, HelpCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { withAuth } from '../components/withAuth';
 import Button from '../components/ui/Button';
@@ -44,14 +44,9 @@ function CreatePage() {
   const [isLoadingPromptHistory, setIsLoadingPromptHistory] = useState(false);
   const myGamesRef = React.useRef(null);
 
-  // CreatorArena generations are funded exclusively with pay-as-you-go credits.
+  // CreatorArena offers a limited number of free AI generations each day.
   const [credits, setCredits] = useState(null);
-  const [creditCost, setCreditCost] = useState(5);
-  const [revisionCost, setRevisionCost] = useState(2);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [checkoutError, setCheckoutError] = useState('');
-  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
-  const checkoutPendingRef = React.useRef(false);
   const [latestVerification, setLatestVerification] = useState(null);
   const [latestVersion, setLatestVersion] = useState(null);
   const [publishability, setPublishability] = useState({ isVerified: false, needsVerification: false });
@@ -108,46 +103,18 @@ function CreatePage() {
     setHasUsedSample(true);
   };
 
-  // Load the current pay-as-you-go balance.
+  // Load today's free generation allowance.
   useEffect(() => {
     if (!token) return;
     fetch(`${config.backend_url}/api/ai/credits`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         if (data.success) {
-          setCredits(data.credits);
-          setCreditCost(data.cost || 5);
+          setCredits(data.remaining);
         }
       })
       .catch(() => {});
   }, [token]);
-
-  // Handle return from credit purchase
-  useEffect(() => {
-    const sessionId = router.query.session_id;
-    const creditsPurchased = router.query.credits_purchased;
-
-    if (creditsPurchased && sessionId && token) {
-      // Verify the purchase and update credits
-      fetch(`${config.backend_url}/api/payment/verify-credit-purchase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ sessionId })
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.verified) {
-            setCredits(data.credits);
-            setSuccess(`Added ${data.creditsAdded || ''} credits!`);
-            setTimeout(() => setSuccess(''), 3000);
-          }
-        })
-        .catch(() => {});
-
-      // Clean URL
-      router.replace('/create', undefined, { shallow: true });
-    }
-  }, [router.query.session_id, router.query.credits_purchased, token, router]);
 
   // Load user's past games
   useEffect(() => {
@@ -227,7 +194,6 @@ function CreatePage() {
         setError('');
         setSuccess('');
         setPromptHistory([]);
-        setRevisionCost(2);
       }
     } catch (err) {
       setError(err.message || 'Failed to load game');
@@ -248,7 +214,6 @@ function CreatePage() {
           setDescription(data.game.description || '');
           setHtml(data.game.html_content || '');
           setPromptHistory([]);
-          setRevisionCost(2);
         }
       } catch (err) {
         setError(err.message || 'Failed to load game for editing');
@@ -256,37 +221,6 @@ function CreatePage() {
     }
     loadGame();
   }, [router.query.edit, token, syncGameStatus]);
-
-  const startCheckout = useCallback(async (packId) => {
-    if (checkoutPendingRef.current) return;
-    checkoutPendingRef.current = true;
-    setIsStartingCheckout(true);
-    setCheckoutError('');
-    try {
-      const res = await fetch(`${config.backend_url}/api/payment/purchase-credits`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ packId })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to start checkout. Please try again.');
-      let checkoutUrl;
-      try {
-        checkoutUrl = new URL(data.url);
-      } catch {
-        throw new Error('Unable to open secure checkout. Please try again.');
-      }
-      if (checkoutUrl.protocol !== 'https:' || checkoutUrl.hostname !== 'checkout.stripe.com') {
-        throw new Error('Unable to open secure checkout. Please try again.');
-      }
-      window.location.assign(checkoutUrl.href);
-    } catch (err) {
-      setCheckoutError(err instanceof TypeError ? 'Failed to start checkout. Please try again.' : err.message);
-    } finally {
-      checkoutPendingRef.current = false;
-      setIsStartingCheckout(false);
-    }
-  }, [token]);
 
   // CreatorArena tutorial: first visit only
   useEffect(() => {
@@ -343,9 +277,9 @@ function CreatePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (data.code === 'INSUFFICIENT_CREDITS') {
-          setShowUpgradeModal(true);
-          setCredits(data.credits);
+        if (data.code === 'CREATOR_DAILY_LIMIT') {
+          setShowUpgradeModal(data.remaining === 0);
+          setCredits(data.remaining);
         }
         setError(data.error || 'Generation failed');
         return;
@@ -360,12 +294,8 @@ function CreatePage() {
           ...prev
         ].slice(0, 15));
       }
-      // Update credits balance and revision cost after generation
-      if (data.credits !== null && data.credits !== undefined) {
-        setCredits(data.credits);
-      }
-      if (data.revisionCost !== undefined) {
-        setRevisionCost(data.revisionCost);
+      if (data.remaining !== undefined) {
+        setCredits(data.remaining);
       }
       if (!title) setTitle(prompt.slice(0, 60) || 'Untitled Game');
       if (customPrompt) setRevisionText('');
@@ -519,22 +449,15 @@ function CreatePage() {
               <span className="text-accent-500 flex items-center gap-0.5">&lt;<Wand2 className="h-5 w-5 inline" />&gt;</span>
             </span>
             <div className="h-5 w-px bg-surface-700" />
-            {/* Credits Badge */}
+            {/* Free generation allowance */}
             <div data-tour-step="creator-credits" className="inline-flex">
             {credits !== null && (
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-800/60 border border-surface-700 rounded-lg">
-                <Coins className="h-3.5 w-3.5 text-primary-400" />
+                <Zap className="h-3.5 w-3.5 text-primary-400" />
                 <span className="text-xs font-semibold text-surface-200">{credits}</span>
-                <span className="text-[10px] text-surface-500">credits</span>
+                <span className="text-[10px] text-surface-500">free uses left today</span>
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => { setCheckoutError(''); setShowUpgradeModal(true); }}
-              className="ml-2 text-xs text-primary-400 hover:text-primary-300"
-            >
-              Add credits
-            </button>
             </div>
             <div data-tour-step="creator-alpha-badge" className="relative group flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg cursor-default">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
@@ -733,13 +656,10 @@ function CreatePage() {
                     size="lg"
                     loading={isGenerating}
                     onClick={() => generate('full')}
-                    disabled={!hasContent || !isValid || (credits !== null && credits < creditCost)}
+                    disabled={!hasContent || !isValid || credits === 0}
                   >
                     {isGenerating ? 'Generating...' : html ? 'Regenerate (replaces entire game!)' : 'Generate Game'}
                     {!isGenerating && <Wand2 className="h-4 w-4 ml-2" />}
-                    {credits !== null && !isGenerating && (
-                      <span className="ml-2 text-xs opacity-75">({creditCost} credits)</span>
-                    )}
                   </Button>
                 );
               })()}
@@ -754,11 +674,8 @@ function CreatePage() {
                     rows={3}
                     onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && revisionText.trim()) { e.preventDefault(); generate('revise', revisionText.trim()); } }}
                   />
-                  <Button variant="primary" size="lg" fullWidth onClick={() => generate('revise', revisionText.trim())} loading={isGenerating} disabled={isGenerating || !revisionText.trim() || (credits !== null && credits < revisionCost)}>
+                  <Button variant="primary" size="lg" fullWidth onClick={() => generate('revise', revisionText.trim())} loading={isGenerating} disabled={isGenerating || !revisionText.trim() || credits === 0}>
                     Make Changes / Additions / Debug
-                    {!isGenerating && (
-                      <span className="ml-2 text-xs opacity-75">({revisionCost} credits)</span>
-                    )}
                   </Button>
                 </div>
               )}
@@ -874,7 +791,7 @@ function CreatePage() {
         </div>
       </div>
 
-      {/* Credits Modal */}
+      {/* Daily allowance notice */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
@@ -889,61 +806,17 @@ function CreatePage() {
               <div className="w-16 h-16 bg-gradient-to-br from-amber-500/20 to-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Zap className="h-8 w-8 text-amber-400" />
               </div>
-              <h2 id="creator-credits-title" className="text-xl font-bold text-white mb-2">CreatorArena credits</h2>
+              <h2 id="creator-credits-title" className="text-xl font-bold text-white mb-2">Daily AI allowance reached</h2>
               <p className="text-surface-400 text-sm">
-                Add a credit pack to continue creating with AI.
+                CreatorArena is free with a daily AI generation limit. Your allowance resets tomorrow.
               </p>
             </div>
-
-            <div className="bg-surface-800/50 rounded-xl p-4 mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-surface-300 text-sm">Your credits</span>
-                <span className="text-white font-semibold">{credits || 0}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-surface-300 text-sm">Cost per generation</span>
-                <span className="text-white font-semibold">{creditCost}</span>
-              </div>
-            </div>
-
             <div className="space-y-4">
-              {checkoutError && <p role="alert" className="text-sm text-red-400">{checkoutError}</p>}
-              {isStartingCheckout && <p role="status" className="text-sm text-surface-300">Opening secure checkout...</p>}
-              {/* Credit Packs */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => startCheckout('small')}
-                  disabled={isStartingCheckout}
-                  className="bg-surface-800/60 border border-surface-700 rounded-xl p-4 hover:border-primary-500/50 hover:bg-surface-800 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Coins className="h-4 w-4 text-primary-400" />
-                    <span className="text-white font-semibold">100 Credits</span>
-                  </div>
-                  <div className="text-primary-400 font-bold text-lg">$5</div>
-                  <div className="text-xs text-surface-500">~20 generations</div>
-                </button>
-
-                <button
-                  onClick={() => startCheckout('large')}
-                  disabled={isStartingCheckout}
-                  className="bg-surface-800/60 border border-surface-700 rounded-xl p-4 hover:border-primary-500/50 hover:bg-surface-800 transition-colors text-left relative"
-                >
-                  <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">BEST VALUE</div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Coins className="h-4 w-4 text-primary-400" />
-                    <span className="text-white font-semibold">500 Credits</span>
-                  </div>
-                  <div className="text-primary-400 font-bold text-lg">$20</div>
-                  <div className="text-xs text-surface-500">~100 generations</div>
-                </button>
-              </div>
-
               <button
                 onClick={() => setShowUpgradeModal(false)}
                 className="w-full py-2.5 text-sm text-surface-400 hover:text-white transition-colors"
               >
-                Maybe later
+                Got it
               </button>
             </div>
           </motion.div>

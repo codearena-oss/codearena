@@ -28,6 +28,29 @@ const aiSource = read('backend/routes/ai.js');
 const paymentSource = read('backend/routes/payment.js');
 
 describe('CodeArena open edition boundary', () => {
+  test('private integrity modules and renamed implementations are rejected by the publish guard', () => {
+    const { FORBIDDEN_PATHS, FORBIDDEN_TEXT } = require('../../scripts/check-boundary');
+    const privatePaths = [
+      'backend/services/assessmentIntegrityEvents.js',
+      'backend/services/editTraceAnalysis.js',
+      'backend/services/cameraProctoring.js',
+      'backend/services/integrityRedaction.js',
+      'backend/services/authorshipFollowUp.js',
+      'backend/services/authorshipReplay.js',
+      'backend/tests/fixtures/assessmentIntegrityCalibrationCases.js',
+      'frontend/components/AntiCheatSuite.js',
+      'frontend/components/AttentionCheck.js',
+      'frontend/utils/integrityFingerprint.js'
+    ];
+    for (const file of privatePaths) {
+      expect(exists(file)).toBe(false);
+      expect(FORBIDDEN_PATHS.some(pattern => pattern.test(file))).toBe(true);
+    }
+    // Renaming a private module does not bypass its characteristic identifiers.
+    expect(FORBIDDEN_TEXT.some(pattern => pattern.test('function summarizeAssessmentIntegrity(flags) {}'))).toBe(true);
+    expect(FORBIDDEN_PATHS.some(pattern => pattern.test('backend/services/antiCheat.js'))).toBe(false);
+    expect(FORBIDDEN_TEXT.some(pattern => pattern.test(read('backend/services/antiCheat.js')))).toBe(false);
+  });
   test('the hiring product and its judges are gone from the backend tree', () => {
     const forbiddenFiles = [
       'backend/routes/company.js', 'backend/routes/webhooks.js', 'backend/routes/editorials.js',
@@ -44,20 +67,20 @@ describe('CodeArena open edition boundary', () => {
       'backend/calibration', 'backend/data/problems', 'backend/data/editorials.json', 'backend/data/botSolutions.js',
       'backend/data/assessmentPacks.js', 'backend/data/assessmentTemplates.json', 'backend/data/companyPrep.js',
       'backend/data/lessons', 'backend/problems-extended.js', 'backend/weeklyProblems.js',
-      'backend/scripts/generatedSolutions', 'backend/scripts/reports', 'backend/config/b2bThresholds.js',
+      'backend/scripts/generatedSolutions', 'backend/scripts/reports', 'backend/scripts/sendCuratedChangelog.js',
+      'backend/services/emailValidation.js', 'backend/config/b2bThresholds.js',
       'backend/config/dataRetention.js', 'backend/utils/validateAssessmentSettings.js'
     ];
     for (const file of forbiddenFiles) expect(exists(file)).toBe(false);
   });
 
   test('no source file outside tests mentions the hiring product', () => {
-    const markers = /deveval|recruiter|take-home|takehome|codepair|hiring manager|candidate_|assessment_session|ats_connection/i;
+    const markers = /deveval|recruiter|take-home|takehome|codepair|hiring manager|hiring workflow|\bb2b\b|candidate_|assessment_session|ats_connection/i;
     const offenders = [];
     for (const dir of ['backend', 'shared']) {
       for (const file of walk(path.join(root, dir))) {
         if (!/\.(js|json|md|sql|yml|yaml)$/.test(file)) continue;
         if (/\/(tests|__tests__)\//.test(file)) continue;
-        if (file.endsWith('migrations.lock.json')) continue; // append-only ledger of historical names
         const text = fs.readFileSync(file, 'utf8');
         const match = text.match(markers);
         if (match) offenders.push(`${path.relative(root, file)}: ${match[0]}`);
@@ -128,11 +151,15 @@ describe('CodeArena open edition boundary', () => {
     expect(exists('frontend/utils/companySignup.js')).toBe(false);
   });
 
-  test('CreatorArena and feedback keep their cost controls, no recurring Pro upsell', () => {
+  test('CreatorArena and feedback keep free-use cost controls without paid upsells', () => {
     expect(aiSource).not.toContain("router.post('/prompt'");
     expect(aiSource).not.toContain('db.isUserPro(userId)');
-    expect(aiSource).toContain('await db.deductCredits(userId, cost');
-    expect(aiSource).toContain('await db.refundCredits(userId, cost');
+    expect(aiSource).toContain("getConsumerFairUseLimit('creatorGenerationsPerDay')");
+    expect(aiSource).toContain("getConsumerFairUseLimit('globalCreatorGenerationsPerDay')");
+    expect(aiSource).toContain('await db.tryConsumeConsumerDailyUsage([');
+    expect(aiSource).not.toContain('await db.deductCredits(userId, cost');
+    expect(paymentSource).toContain("code: 'creator_purchases_retired'");
+    expect(read('frontend/pages/create.js')).not.toContain('/api/payment/purchase-credits');
     expect(paymentSource).not.toContain('updateCompanyBilling');
     expect(paymentSource).toContain('rejectRetiredConsumerSubscription');
     expect(read('frontend/components/Header.js')).not.toContain('Upgrade to Pro');

@@ -10,10 +10,11 @@
  *      source, so a source-only uniqueness check can't see it, but prod has the
  *      id marked applied, so B is skipped forever.
  *
- * The ledger is an append-only record of every id ever used -> its migration
- * name, INCLUDING retired ids no longer in source. The test (migrationIds.test.js)
+ * The ledger reserves every id ever used. Active ids retain their exact migration
+ * names; retired ids are opaque tombstones so the current public tree does not
+ * carry historical names from the other product. The test (migrationIds.test.js)
  * asserts source agrees with the ledger; update-migration-ledger.js registers new
- * migrations. Together they make both failure modes impossible to ship.
+ * migrations. Together they prevent both failure modes.
  */
 const fs = require('fs');
 const path = require('path');

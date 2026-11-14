@@ -19,9 +19,9 @@ Thanks for helping. The two most useful contributions are bug reports with steps
 
 Players can write Python, JavaScript or TypeScript today. Java, C++ and Go
 are open for contributors, each with a full guide in its issue:
-[Java (#1)](https://github.com/sennaicodes/codearena/issues/1),
-[C++ (#2)](https://github.com/sennaicodes/codearena/issues/2) and
-[Go (#3)](https://github.com/sennaicodes/codearena/issues/3), which is the easiest place to start.
+[Java (#1)](https://github.com/codearena-oss/codearena/issues/1),
+[C++ (#2)](https://github.com/codearena-oss/codearena/issues/2) and
+[Go (#3)](https://github.com/codearena-oss/codearena/issues/3), which is the easiest place to start.
 
 ## Running the checks
 

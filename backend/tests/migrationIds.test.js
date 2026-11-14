@@ -8,9 +8,9 @@
  *                      unique in source, so a plain uniqueness check can't see it,
  *                      but prod has the id marked applied so B is skipped forever.
  *
- * migrations.lock.json is an append-only ledger of every id ever used -> its
- * migration name (including retired ids no longer in source, e.g. 707/798/809,
- * which were recycled and re-issued under fresh ids). This test asserts the
+ * migrations.lock.json reserves every id ever used. Active ids retain their exact
+ * names; retired ids use opaque tombstones, including 707/798/809, which were
+ * recycled and re-issued under fresh ids. This test asserts the
  * db.js migrations array agrees with the ledger. When you add a migration, run
  * `npm run migrations:ledger` to register it.
  */
